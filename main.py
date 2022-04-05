@@ -1,7 +1,7 @@
-from dataset.reader import DataReader
+from dataset.reader import DatasetLoader
 from utils import set_up_logger, config
-import logging
 
+import logging
 import os
 
 
@@ -18,5 +18,8 @@ if __name__ == '__main__':
     set_up_logger()
     log_introductory_info(data_path)
 
-    dataset_reader = DataReader(data_path=data_path)
-    dataset_reader.read('test.txt')
+    dataset_reader = DatasetLoader(data_path=data_path)
+    train = dataset_reader.load('train.txt')
+    dev = dataset_reader.load('dev.txt')
+    test = dataset_reader.load('test.txt')
+

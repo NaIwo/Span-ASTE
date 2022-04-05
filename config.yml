@@ -1,11 +1,8 @@
 general:
-  device: cpu # {cpu, gpu}
+  device: cpu # {cpu, cuda}
   logging-level: INFO
 dataset:
   batch-size: 4
-  shuffle-seed: null
-sentence:
-  max-length: 100
 model:
   epochs: 100
   learning-rate: 0.00001

@@ -1,7 +1,9 @@
 from ASTE.dataset.encoders.encoder import encoder
+from .const import SENTIMENT_MAPPER
 
 from ast import literal_eval
-from typing import List, Tuple, Dict, TypeVar
+from typing import List, Tuple, TypeVar
+import numpy as np
 
 S = TypeVar('S', bound='Span')
 T = TypeVar('T', bound='Triplet')
@@ -15,7 +17,7 @@ class Sentence:
         self.sentence: str = splitted_sentence[0]
         triplets_info: List[Tuple] = literal_eval(splitted_sentence[1])
 
-        self.encoded_sentence: List = encoder.encode(sentence=self.sentence)
+        self.encoded_sentence: List[int] = encoder.encode(sentence=self.sentence)
         self.encoded_words_in_sentence: List = encoder.encode_word_by_word(sentence=self.sentence)
         self.sub_words_lengths: List[int] = [len(word) - 1 for word in self.encoded_words_in_sentence]
         self.sentence_length: int = len(self.sentence.split())
@@ -58,15 +60,10 @@ class Triplet:
         self.aspect_span: Span = aspect_span
         self.opinion_span: Span = opinion_span
         self._sentiment: str = sentiment
-        self._mapper: Dict = {
-            'POS': 1,
-            'NEU': 0,
-            'NEG': -1
-        }
 
     @property
     def sentiment(self) -> int:
-        return self._mapper[self._sentiment]
+        return SENTIMENT_MAPPER[self._sentiment]
 
     @classmethod
     def from_triplet_info(cls, triplet_info: Tuple, sentence: str) -> T:
