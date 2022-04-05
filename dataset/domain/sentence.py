@@ -1,9 +1,8 @@
-from ASTE.dataset.encoders.encoder import encoder
+from ASTE.dataset.encoders.base_encoder import BaseEncoder
 from .const import SENTIMENT_MAPPER
 
 from ast import literal_eval
 from typing import List, Tuple, TypeVar
-import numpy as np
 
 S = TypeVar('S', bound='Span')
 T = TypeVar('T', bound='Triplet')
@@ -12,7 +11,8 @@ T = TypeVar('T', bound='Triplet')
 class Sentence:
     SEP: str = '#### #### ####'
 
-    def __init__(self, raw_sentence: str):
+    def __init__(self, raw_sentence: str, encoder: BaseEncoder):
+        self.encoder: BaseEncoder = encoder
         splitted_sentence: List = raw_sentence.split(Sentence.SEP)
         self.sentence: str = splitted_sentence[0]
         triplets_info: List[Tuple] = literal_eval(splitted_sentence[1])
@@ -28,7 +28,7 @@ class Sentence:
             self.triplets.append(Triplet.from_triplet_info(triplet_info, self.sentence))
 
     def get_index_after_encoding(self, idx: int) -> int:
-        return encoder.offset + idx + sum(self.sub_words_lengths[:idx])
+        return self.encoder.offset + idx + sum(self.sub_words_lengths[:idx])
 
 
 class Span:

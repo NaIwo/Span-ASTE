@@ -11,3 +11,11 @@ class BaseEncoder:
 
     def encode_single_word(self, word: str) -> List:
         return [len(word)]
+
+    def encode_word_by_word(self, sentence: str) -> List[List]:
+        encoded_words: List = list()
+        word: str
+        for word in sentence.strip().split():
+            encoded_words.append(self.encode_single_word(word))
+
+        return encoded_words

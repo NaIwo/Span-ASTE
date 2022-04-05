@@ -6,11 +6,9 @@ dataset:
 model:
   epochs: 100
   learning-rate: 0.00001
-  type: bert
   bert:
     source: bert-base-uncased
 encoder:
-  type: bert
   bert:
     source: bert-base-uncased
     embedding-dimension: 768
