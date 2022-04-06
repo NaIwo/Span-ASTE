@@ -1,11 +1,12 @@
 general:
-  device: cpu # {cpu, cuda}
+  device: cuda # {cpu, cuda}
   logging-level: INFO
 dataset:
   batch-size: 4
 model:
   epochs: 100
   learning-rate: 0.00001
+  early-stopping: 10 # num of epochs without improvement
   bert:
     source: bert-base-uncased
 encoder:

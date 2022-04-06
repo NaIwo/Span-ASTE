@@ -27,8 +27,10 @@ if __name__ == '__main__':
     dev_data = dataset_reader.load('dev.txt', encoder=BertEncoder())
     test_data = dataset_reader.load('test.txt', encoder=BertEncoder())
 
-
-
     trainer: Trainer = Trainer(model=model)
-    trainer.train(train_data)
+    trainer.train(train_data=train_data, dev_data=dev_data)
+    # trainer.load_model(os.path.join(os.getcwd(), 'results', '20220406-140800', 'bert_base_model.pth'))
+    # sentence, chunk_label, mask = next(iter(test_data))
+    # print(trainer.predict(sentence, mask))
+    # print(chunk_label)
 

@@ -14,7 +14,7 @@ class BertBaseModel(BaseModel):
         self.linear_layer_1 = torch.nn.Linear(config['encoder']['bert']['embedding-dimension'], 300)
         self.linear_layer_2 = torch.nn.Linear(300, 100)
         self.linear_layer_3 = torch.nn.Linear(100,  10)
-        self.final_layer = torch.nn.Linear(10, 3)
+        self.final_layer = torch.nn.Linear(10, 2)
         self.softmax = torch.nn.Softmax(dim=-1)
 
     def forward(self, sentence: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
