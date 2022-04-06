@@ -57,15 +57,15 @@ class Trainer:
         logging.info(f"Model '{model.model_name}' has been initialized.")
         self.model: BaseModel = model.to(config['general']['device'])
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=config['model']['learning-rate'])
-        self.chunk_loss = DiceLoss(ignore_index=int(ChunkCode.NOT_RELEVANT), alpha=0.9)
+        self.chunk_loss = DiceLoss(ignore_index=int(ChunkCode.NOT_RELEVANT), alpha=0.8)
         self.memory = Memory()
         if metrics is None:
             self.metrics = Metrics(metrics=[
-                Precision(num_classes=2),
-                Recall(num_classes=2),
-                Accuracy(num_classes=2),
-                FBetaScore(num_classes=2, beta=0.5),
-                F1Score(num_classes=2)
+                Precision(num_classes=1),
+                Recall(num_classes=1),
+                Accuracy(num_classes=1),
+                FBetaScore(num_classes=1, beta=0.5),
+                F1Score(num_classes=1)
             ]).to(config['general']['device'])
         else:
             self.metrics = metrics.to(config['general']['device'])
@@ -99,7 +99,8 @@ class Trainer:
         for batch_idx, batch in enumerate(bar := tqdm(train_data)):
             sentence, chunk_label, mask = batch
             model_out: torch.Tensor = self.model(sentence, mask)
-            loss = self.chunk_loss(model_out.view([-1, model_out.shape[2]]), chunk_label.view([-1]))
+            loss = self.chunk_loss(model_out.view([-1, model_out.shape[2]]), chunk_label.view([-1]),
+                                   mask=mask.view([-1]))
             loss.backward()
             self.optimizer.step()
             self.optimizer.zero_grad()
@@ -126,10 +127,9 @@ class Trainer:
             for batch in tqdm(test_data):
                 sentence, chunk_label, mask = batch
                 model_out: torch.Tensor = self.model(sentence, mask)
-                model_out = model_out.view([-1, model_out.shape[2]])
                 chunk_label = chunk_label.view([-1])
-                test_loss += self.chunk_loss(model_out, chunk_label)
-                self.metrics(model_out, chunk_label)
+                test_loss += self.chunk_loss(model_out.view([-1, model_out.shape[-1]]), chunk_label, mask=mask.view([-1]))
+                self.metrics(model_out.view([-1]), chunk_label)
             logging.info(f'Test loss: {test_loss / len(test_data)}')
             self.metrics.compute()
             self.metrics.reset()

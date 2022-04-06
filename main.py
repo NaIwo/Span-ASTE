@@ -1,3 +1,5 @@
+import torch
+
 from dataset.reader import DatasetLoader
 from utils import set_up_logger, config
 from ASTE.aste.trainer import Trainer
@@ -29,8 +31,8 @@ if __name__ == '__main__':
 
     trainer: Trainer = Trainer(model=model)
     trainer.train(train_data=train_data, dev_data=dev_data)
-    # trainer.load_model(os.path.join(os.getcwd(), 'results', '20220406-140800', 'bert_base_model.pth'))
+    # trainer.load_model(os.path.join(os.getcwd(), 'results', '20220406-192236', 'bert_base_model.pth'))
     # sentence, chunk_label, mask = next(iter(test_data))
-    # print(trainer.predict(sentence, mask))
+    # print(torch.argmax(trainer.predict(sentence, mask), dim=-1))
     # print(chunk_label)
 
