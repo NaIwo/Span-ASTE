@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     trainer: Trainer = Trainer(model=model)
     trainer.train(train_data=train_data, dev_data=dev_data)
-    # trainer.load_model(os.path.join(os.getcwd(), 'results', '20220406-192236', 'bert_base_model.pth'))
+    # trainer.load_model(os.path.join(os.getcwd(), 'results', '20220406-204646', 'bert_base_model.pth'))
     # sentence, chunk_label, mask = next(iter(test_data))
     # print(torch.argmax(trainer.predict(sentence, mask), dim=-1))
     # print(chunk_label)

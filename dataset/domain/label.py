@@ -13,7 +13,7 @@ class Label:
 
     @classmethod
     def from_sentence(cls, sentence: Sentence) -> L:
-        chunk: np.ndarray = np.full(shape=sentence.encoded_sentence_length, fill_value=int(ChunkCode.NOT_SPLIT))
+        chunk: np.ndarray = np.full(shape=sentence.encoded_sentence_length, fill_value=int(ChunkCode.NOT_RELEVANT))
 
         def fill_chunk(start_idx: int, end_idx: int):
             chunk[start_idx:end_idx + 1] = int(ChunkCode.NOT_SPLIT)
