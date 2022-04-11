@@ -44,6 +44,13 @@ class DatasetLoader:
 
     @staticmethod
     def _collate_fn(batch: List):
+
+        class Batch:
+            def __init__(self, sentence: torch.Tensor, chunk_label: torch.Tensor, mask: torch.Tensor):
+                self.sentence: torch.Tensor = sentence
+                self.chunk_label: torch.Tensor = chunk_label
+                self.mask: torch.Tensor = mask
+
         encoded_sentences: List = list()
         chunk_labels: List = list()
         lengths: List = list()
@@ -61,5 +68,5 @@ class DatasetLoader:
         mask = mask < lengths.unsqueeze(1)
         idx = torch.argsort(lengths, descending=True)
 
-        return sentence_batch[idx].to(config['general']['device']), chunk_batch[idx].to(
-            config['general']['device']), mask.to(config['general']['device'])[idx].type(torch.int8)
+        return Batch(sentence_batch[idx].to(config['general']['device']), chunk_batch[idx].to(
+            config['general']['device']), mask.to(config['general']['device'])[idx].type(torch.int8))

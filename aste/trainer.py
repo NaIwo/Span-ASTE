@@ -111,9 +111,8 @@ class Trainer:
         self.model.train()
         epoch_loss = 0.
         for batch_idx, batch in enumerate(bar := tqdm(train_data)):
-            sentence, chunk_label, mask = batch
-            model_out: torch.Tensor = self.model(sentence, mask)
-            loss = self.chunk_loss(model_out.view([-1, model_out.shape[-1]]), chunk_label.view([-1]))
+            model_out: torch.Tensor = self.model(batch.sentence, batch.mask)
+            loss = self.chunk_loss(model_out.view([-1, model_out.shape[-1]]), batch.chunk_label.view([-1]))
             loss.backward()
             self.optimizer.step()
             self.optimizer.zero_grad()
@@ -139,9 +138,8 @@ class Trainer:
         test_loss: float = 0.
         with torch.no_grad():
             for batch in tqdm(test_data):
-                sentence, chunk_label, mask = batch
-                model_out: torch.Tensor = self.model(sentence, mask)
-                chunk_label = chunk_label.view([-1])
+                model_out: torch.Tensor = self.model(batch.sentence, batch.mask)
+                chunk_label = batch.chunk_label.view([-1])
                 model_out = model_out.view([-1, model_out.shape[-1]])
                 test_loss += self.chunk_loss(model_out, chunk_label)
                 self.metrics(model_out, chunk_label)
