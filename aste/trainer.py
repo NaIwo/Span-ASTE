@@ -7,7 +7,7 @@ from .losses import DiceLoss
 import torch
 from torchmetrics import FBetaScore, Accuracy, Precision, Recall, F1Score, MetricCollection
 from torch.utils.data import DataLoader
-from typing import Optional
+from typing import Optional, Dict, Callable
 import logging
 from datetime import datetime
 from tqdm import tqdm
@@ -15,18 +15,24 @@ import os
 
 
 class Memory:
-    def __init__(self):
+    def __init__(self, opt_direction: str = 'min'):
         self.best_epoch: int = 0
-        self.best_loss: float = float('inf')
+        self.opt_direction: str = opt_direction
+        if self.opt_direction == 'min':
+            self.func: Callable = min
+            self.best_value: float = float('inf')
+        elif self.opt_direction == 'max':
+            self.func: Callable = max
+            self.best_value: float = float('-inf')
         self.patience: Optional[int] = config['model']['early-stopping']
 
-    def update(self, epoch: int, loss: float) -> bool:
+    def update(self, epoch: int, value: float) -> bool:
         improvement: bool = False
-        best_loss = min(self.best_loss, loss)
-        if best_loss != self.best_loss:
+        best_loss = self.func(self.best_value, value)
+        if best_loss != self.best_value:
             improvement = True
             self.best_epoch = epoch
-            self.best_loss = loss
+            self.best_value = value
         return improvement
 
     def early_stopping(self, epoch: int) -> bool:
@@ -48,8 +54,10 @@ class Metrics(MetricCollection):
         logging.info(f'Metrics: ')
         metric_name: str
         score: torch.Tensor
-        for metric_name, score in super(Metrics, self).compute().items():
+        computed: Dict = super(Metrics, self).compute()
+        for metric_name, score in computed.items():
             logging.info(f'\t->\t{metric_name}: {score.item()}')
+        return computed
 
 
 class Trainer:
@@ -57,8 +65,8 @@ class Trainer:
         logging.info(f"Model '{model.model_name}' has been initialized.")
         self.model: BaseModel = model.to(config['general']['device'])
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=config['model']['learning-rate'])
-        self.chunk_loss = DiceLoss(ignore_index=int(ChunkCode.NOT_RELEVANT), alpha=0.7)
-        self.memory = Memory()
+        self.chunk_loss = DiceLoss(ignore_index=int(ChunkCode.NOT_RELEVANT), alpha=0.99)
+        self.memory = Memory('max')
         if metrics is None:
             self.metrics = Metrics(metrics=[
                 Precision(num_classes=1, multiclass=False),
@@ -109,8 +117,8 @@ class Trainer:
 
     def _eval(self, epoch: int, dev_data: DataLoader) -> bool:
         if dev_data is not None:
-            test_loss: float = self.test(dev_data)
-            improvement: bool = self.memory.update(epoch, test_loss)
+            value: Dict = self.test(dev_data)
+            improvement: bool = self.memory.update(epoch, value['Recall'])
             if improvement:
                 logging.info(f'Improvement has occurred. Saving the model in the path: {self.save_path}')
                 self.save_model(self.save_path)
@@ -118,8 +126,9 @@ class Trainer:
                 return True
         return False
 
-    def test(self, test_data: DataLoader) -> float:
+    def test(self, test_data: DataLoader) -> Dict:
         self.model.eval()
+        return_values: Dict = {}
         logging.info(f'Test started...')
         test_loss: float = 0.
         with torch.no_grad():
@@ -131,9 +140,11 @@ class Trainer:
                 test_loss += self.chunk_loss(model_out, chunk_label)
                 self.metrics(model_out, chunk_label)
             logging.info(f'Test loss: {test_loss / len(test_data):.3f}')
-            self.metrics.compute()
+            metric_results: Dict = self.metrics.compute()
+            return_values.update(metric_results)
             self.metrics.reset()
-        return test_loss / len(test_data)
+        return_values['test_loss'] = test_loss / len(test_data)
+        return return_values
 
     def save_model(self, save_path: str) -> None:
         torch.save(self.model.state_dict(), save_path)
