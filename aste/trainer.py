@@ -25,8 +25,14 @@ class Memory:
             self.func: Callable = max
             self.best_value: float = float('-inf')
         self.patience: Optional[int] = config['model']['early-stopping']
+        self.early_stopping_objective: Optional[str] = None
+        if self.patience is not None:
+            self.early_stopping_objective = config['model']['early-stopping-objective'].capitalize()
+            if 'Loss' in self.early_stopping_objective:
+                self.early_stopping_objective = 'Test_loss'
 
-    def update(self, epoch: int, value: float) -> bool:
+    def update(self, epoch: int, values_dict: Dict) -> bool:
+        value: float = values_dict[self.early_stopping_objective]
         improvement: bool = False
         best_loss = self.func(self.best_value, value)
         if best_loss != self.best_value:
@@ -117,8 +123,8 @@ class Trainer:
 
     def _eval(self, epoch: int, dev_data: DataLoader) -> bool:
         if dev_data is not None:
-            value: Dict = self.test(dev_data)
-            improvement: bool = self.memory.update(epoch, value['Recall'])
+            values_dict: Dict = self.test(dev_data)
+            improvement: bool = self.memory.update(epoch, values_dict)
             if improvement:
                 logging.info(f'Improvement has occurred. Saving the model in the path: {self.save_path}')
                 self.save_model(self.save_path)
@@ -143,7 +149,7 @@ class Trainer:
             metric_results: Dict = self.metrics.compute()
             return_values.update(metric_results)
             self.metrics.reset()
-        return_values['test_loss'] = test_loss / len(test_data)
+        return_values['Test_loss'] = test_loss / len(test_data)
         return return_values
 
     def save_model(self, save_path: str) -> None:
