@@ -154,20 +154,22 @@ class Trainer:
 
     def check_coverage_detected_spans(self, data: DataLoader) -> float:
         num_predicted: int = 0
+        num_correct_predicted: int = 0
         true_num: int = 0
         for batch in tqdm(data):
             for sample in batch:
-                predictions: np.ndarray = np.argmax(self.predict(sample.sentence, sample.mask).cpu().numpy(), axis=-1)[
-                    0]
+                predictions: np.ndarray = self.predict(sample.sentence, sample.mask).cpu().numpy()[0]
+                predictions = np.argmax(predictions, axis=-1)
                 true_spans: List[Tuple[int, int]] = sample.sentence_obj[0].get_all_unordered_spans()
                 predictions = np.pad(np.where(predictions)[0], 1, constant_values=(0, len(predictions)))
                 predicted_spans: np.ndarray = np.lib.stride_tricks.sliding_window_view(predictions, 2)
                 predicted_spans = np.array(predicted_spans)
                 predicted_spans[:, 1] -= 1
-                num_predicted += self._count_intersection(true_spans, predicted_spans)
+                num_correct_predicted += self._count_intersection(true_spans, predicted_spans)
+                num_predicted += predicted_spans.shape[0]
                 true_num += len(true_spans)
-        ratio: float = num_predicted / true_num
-        logging.info(f'Coverage of isolated spans: {ratio}')
+        ratio: float = num_correct_predicted / true_num
+        logging.info(f'Coverage of isolated spans: {ratio}. Extracted spans: {num_predicted}')
         return ratio
 
     @staticmethod
