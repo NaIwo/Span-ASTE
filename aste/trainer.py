@@ -1,3 +1,5 @@
+import numpy as np
+
 from ASTE.aste.models.base_model import BaseModel
 from ASTE.utils import config
 from ASTE.dataset.domain.const import ChunkCode
@@ -7,7 +9,7 @@ from .losses import DiceLoss
 import torch
 from torchmetrics import FBetaScore, Accuracy, Precision, Recall, F1Score, MetricCollection
 from torch.utils.data import DataLoader
-from typing import Optional, Dict, Callable
+from typing import Optional, Dict, Callable, List, Tuple, Set
 import logging
 from datetime import datetime
 from tqdm import tqdm
@@ -150,12 +152,38 @@ class Trainer:
         return_values['Test_loss'] = test_loss / len(test_data)
         return return_values
 
+    def check_coverage_detected_spans(self, data: DataLoader) -> float:
+        num_predicted: int = 0
+        true_num: int = 0
+        for batch in tqdm(data):
+            for sample in batch:
+                predictions: np.ndarray = np.argmax(self.predict(sample.sentence, sample.mask).cpu().numpy(), axis=-1)[
+                    0]
+                true_spans: List[Tuple[int, int]] = sample.sentence_obj[0].get_all_unordered_spans()
+                predictions = np.pad(np.where(predictions)[0], 1, constant_values=(0, len(predictions)))
+                predicted_spans: np.ndarray = np.lib.stride_tricks.sliding_window_view(predictions, 2)
+                predicted_spans = np.array(predicted_spans)
+                predicted_spans[:, 1] -= 1
+                num_predicted += self._count_intersection(true_spans, predicted_spans)
+                true_num += len(true_spans)
+        ratio: float = num_predicted / true_num
+        logging.info(f'Coverage of isolated spans: {ratio}')
+        return ratio
+
+    @staticmethod
+    def _count_intersection(true_spans: List[Tuple[int, int]], predicted_spans: np.ndarray) -> int:
+        predicted_spans: Set = set([(row[0], row[1]) for row in predicted_spans])
+        true_spans: Set = set(true_spans)
+        return len(predicted_spans.intersection(true_spans))
+
     def save_model(self, save_path: str) -> None:
         torch.save(self.model.state_dict(), save_path)
 
     def load_model(self, save_path: str) -> None:
         self.model.load_state_dict(torch.load(save_path))
 
-    def predict(self, sentence, mask) -> torch.Tensor:
+    def predict(self, sentence: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         self.model.eval()
-        return self.model(sentence, mask)
+        with torch.no_grad():
+            out: torch.Tensor = self.model(sentence, mask)
+        return out

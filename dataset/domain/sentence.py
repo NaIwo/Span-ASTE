@@ -27,6 +27,18 @@ class Sentence:
         for triplet_info in triplets_info:
             self.triplets.append(Triplet.from_triplet_info(triplet_info, self.sentence))
 
+    def get_all_unordered_spans(self) -> List[Tuple[int, int]]:
+        all_spans: List = list()
+        triplet: Triplet
+        for triplet in self.triplets:
+            aspect_span: Tuple = (self.get_index_after_encoding(triplet.aspect_span.start_idx),
+                                  self.get_index_after_encoding(triplet.aspect_span.end_idx))
+            opinion_span: Tuple = (self.get_index_after_encoding(triplet.opinion_span.start_idx),
+                                   self.get_index_after_encoding(triplet.opinion_span.end_idx))
+            all_spans.append(aspect_span)
+            all_spans.append(opinion_span)
+        return all_spans
+
     def get_index_after_encoding(self, idx: int) -> int:
         return self.encoder.offset + idx + sum(self.sub_words_lengths[:idx])
 
