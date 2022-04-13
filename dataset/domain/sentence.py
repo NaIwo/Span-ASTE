@@ -17,9 +17,17 @@ class Sentence:
         self.sentence: str = splitted_sentence[0]
         triplets_info: List[Tuple] = literal_eval(splitted_sentence[1])
 
-        self.encoded_sentence: List[int] = encoder.encode(sentence=self.sentence)
-        self.encoded_words_in_sentence: List = encoder.encode_word_by_word(sentence=self.sentence)
-        self.sub_words_lengths: List[int] = [len(word) - 1 for word in self.encoded_words_in_sentence]
+        self.encoded_sentence: List[int] = self.encoder.encode(sentence=self.sentence)
+        self.encoded_words_in_sentence: List = self.encoder.encode_word_by_word(sentence=self.sentence)
+        self.sub_words_lengths: List[int] = list()
+        self.sub_words_mask: List[int] = list()
+        word: List[int]
+        for word in self.encoded_words_in_sentence:
+            self.sub_words_lengths.append(len(word) - 1)
+            self.sub_words_mask += [1] + [0]*(len(word)-1)
+        offset: List[int] = [0] * self.encoder.offset
+        self.sub_words_mask = offset + self.sub_words_mask + offset
+
         self.sentence_length: int = len(self.sentence.split())
         self.encoded_sentence_length: int = len(self.encoded_sentence)
 
@@ -31,10 +39,12 @@ class Sentence:
         all_spans: List = list()
         triplet: Triplet
         for triplet in self.triplets:
+            # +1)-1 -> If end index is the same as start_idx and word is constructed from sub-tokens
+            # end index is shifted by number equals to this sub-words count.
             aspect_span: Tuple = (self.get_index_after_encoding(triplet.aspect_span.start_idx),
-                                  self.get_index_after_encoding(triplet.aspect_span.end_idx))
+                                  self.get_index_after_encoding(triplet.aspect_span.end_idx+1)-1)
             opinion_span: Tuple = (self.get_index_after_encoding(triplet.opinion_span.start_idx),
-                                   self.get_index_after_encoding(triplet.opinion_span.end_idx))
+                                   self.get_index_after_encoding(triplet.opinion_span.end_idx+1)-1)
             all_spans.append(aspect_span)
             all_spans.append(opinion_span)
         return all_spans

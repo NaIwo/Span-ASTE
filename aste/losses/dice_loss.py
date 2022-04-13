@@ -84,7 +84,7 @@ class DiceLoss(nn.Module):
         self.ignore_index = ignore_index
 
     @ignore_index
-    def forward(self, input: Tensor, target: Tensor, mask: Optional[Tensor] = None) -> Tensor:
+    def forward(self, input: Tensor, target: Tensor, *, mask: Optional[Tensor] = None) -> Tensor:
         logits_size = input.shape[-1]
 
         if logits_size != 1:

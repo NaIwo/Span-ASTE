@@ -144,7 +144,7 @@ class Trainer:
                 chunk_label = batch.chunk_label.view([-1])
                 model_out = model_out.view([-1, model_out.shape[-1]])
                 test_loss += self.chunk_loss(model_out, chunk_label)
-                self.metrics(model_out, chunk_label)
+                self.metrics(self._model_out_for_metrics(model_out, batch), chunk_label)
             logging.info(f'Test loss: {test_loss / len(test_data):.3f}')
             metric_results: Dict = self.metrics.compute()
             return_values.update(metric_results)
@@ -152,25 +152,50 @@ class Trainer:
         return_values['Test_loss'] = test_loss / len(test_data)
         return return_values
 
+    @staticmethod
+    def _model_out_for_metrics(model_out: torch.Tensor, batch) -> torch.Tensor:
+        # Prediction help - if a token consists of several sub-tokens, we certainly do not split in those sub-tokens.
+        fill_value: torch.Tensor = torch.zeros(model_out.shape[-1]).to(config['general']['device'])
+        fill_value[int(ChunkCode.NOT_SPLIT)] = 1.
+        sub_mask: torch.Tensor = batch.sub_words_mask.bool().view([-1, 1])
+        return torch.where(sub_mask, model_out, fill_value)
+
     def check_coverage_detected_spans(self, data: DataLoader) -> float:
         num_predicted: int = 0
         num_correct_predicted: int = 0
         true_num: int = 0
         for batch in tqdm(data):
             for sample in batch:
-                predictions: np.ndarray = self.predict(sample.sentence, sample.mask).cpu().numpy()[0]
-                predictions = np.argmax(predictions, axis=-1)
+                predicted_spans = self._get_predicted_spans(sample)
                 true_spans: List[Tuple[int, int]] = sample.sentence_obj[0].get_all_unordered_spans()
-                predictions = np.pad(np.where(predictions)[0], 1, constant_values=(0, len(predictions)))
-                predicted_spans: np.ndarray = np.lib.stride_tricks.sliding_window_view(predictions, 2)
-                predicted_spans = np.array(predicted_spans)
-                predicted_spans[:, 1] -= 1
                 num_correct_predicted += self._count_intersection(true_spans, predicted_spans)
                 num_predicted += predicted_spans.shape[0]
                 true_num += len(true_spans)
         ratio: float = num_correct_predicted / true_num
         logging.info(f'Coverage of isolated spans: {ratio}. Extracted spans: {num_predicted}')
         return ratio
+
+    def _get_predicted_spans(self, sample) -> np.ndarray:
+        offset: int = sample.sentence_obj[0].encoder.offset
+        predictions: np.ndarray = self.predict(sample.sentence, sample.mask).cpu().numpy()[0]
+        # predictions = np.argmax(predictions, axis=-1)
+        predictions = np.where(predictions[:, 1] >= 0.5, 1, 0)
+        predictions = predictions[:sample.sentence_obj[0].encoded_sentence_length]
+        sub_mask: torch.Tensor = sample.sub_words_mask.cpu().numpy()[0][
+                                 :sample.sentence_obj[0].encoded_sentence_length]
+        # Prediction help - if a token consists of several sub-tokens, we certainly do not split in those sub-tokens.
+        predictions = np.where(sub_mask, predictions, int(ChunkCode.NOT_SPLIT))
+        # Start and end of spans are the same as start and end of sentence
+        predictions = np.pad(np.where(predictions)[0], 1, constant_values=(offset, len(predictions)-offset))
+        predicted_spans: np.ndarray = np.lib.stride_tricks.sliding_window_view(predictions, 2)
+        # lib.stride_tricks return view of array and we can not manage them as normal array with new shape.
+        predicted_spans = np.array(predicted_spans)
+        # Because we perform split ->before<- selected word.
+        predicted_spans[:, 1] -= 1
+        # This deletion is due to offset in padding. Some spans can started from this offset and
+        # we could end up with wrong extracted span.
+        return np.delete(predicted_spans, np.where(predicted_spans[:, 0] > predicted_spans[:, 1]), axis=0)
+
 
     @staticmethod
     def _count_intersection(true_spans: List[Tuple[int, int]], predicted_spans: np.ndarray) -> int:

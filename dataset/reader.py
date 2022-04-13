@@ -47,37 +47,43 @@ class DatasetLoader:
         sentence_objs: List[Sentence] = list()
         encoded_sentences: List = list()
         chunk_labels: List = list()
+        sub_words_masks: List = list()
         lengths: List = list()
         sample: Dict
         for sample in batch:
             sentence_objs.append(sample["sentence"])
             encoded_sentences.append(torch.tensor(sample["sentence"].encoded_sentence))
             chunk_labels.append(torch.tensor(sample["chunk"]))
+            sub_words_masks.append(torch.tensor(sample["sentence"].sub_words_mask))
             lengths.append(sample["sentence"].encoded_sentence_length)
 
         lengths: torch.Tensor = torch.tensor(lengths, dtype=torch.int64)
         sentence_batch = pad_sequence(encoded_sentences, padding_value=0, batch_first=True)
         chunk_batch = pad_sequence(chunk_labels, padding_value=int(ChunkCode.NOT_RELEVANT), batch_first=True)
+        sub_words_masks_batch = pad_sequence(sub_words_masks, padding_value=0, batch_first=True)
         mask = self._construct_mask(lengths)
         idx = torch.argsort(lengths, descending=True)
 
         return _Batch(sentence_obj=list(np.array(sentence_objs)[idx]),
                       sentence=sentence_batch[idx].to(config['general']['device']),
                       chunk_label=chunk_batch[idx].to(config['general']['device']),
-                      mask=mask.to(config['general']['device'])[idx].type(torch.int8))
+                      sub_words_masks=sub_words_masks_batch[idx].to(config['general']['device']),
+                      mask=mask[idx].to(config['general']['device']))
 
     @staticmethod
-    def _construct_mask(lengths) -> torch.Tensor:
+    def _construct_mask(lengths: torch.Tensor) -> torch.Tensor:
         max_len: int = max(lengths).item()
         mask: torch.Tensor = torch.arange(max_len).expand(lengths.shape[0], max_len)
-        return mask < lengths.unsqueeze(1)
+        return (mask < lengths.unsqueeze(1)).type(torch.int8)
 
 
 class _Batch:
-    def __init__(self, sentence_obj: [Sentence], sentence: torch.Tensor, chunk_label: torch.Tensor, mask: torch.Tensor):
+    def __init__(self, sentence_obj: [Sentence], sentence: torch.Tensor, chunk_label: torch.Tensor,
+                 sub_words_masks: torch.Tensor, mask: torch.Tensor):
         self.sentence_obj: List[Sentence] = sentence_obj
         self.sentence: torch.Tensor = sentence
         self.chunk_label: torch.Tensor = chunk_label
+        self.sub_words_mask: torch.Tensor = sub_words_masks
         self.mask: torch.Tensor = mask
 
     def __iter__(self):
@@ -91,4 +97,5 @@ class _Batch:
         return _Batch([self.sentence_obj[self.num]],
                       self.sentence[self.num].unsqueeze(0),
                       self.chunk_label[self.num].unsqueeze(0),
+                      self.sub_words_mask[self.num].unsqueeze(0),
                       self.mask[self.num].unsqueeze(0))

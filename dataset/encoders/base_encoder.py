@@ -5,6 +5,7 @@ class BaseEncoder:
     def __init__(self, encoder_name: str = 'basic tokenizer'):
         self.encoder_name: str = encoder_name
         self.offset: int = 0
+        self.encoder = None
 
     def encode(self, sentence: str) -> List:
         return [len(word) for word in sentence.strip().split()]
