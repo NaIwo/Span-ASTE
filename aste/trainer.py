@@ -163,8 +163,7 @@ class Trainer:
         # loss: torch.Tensor = torch.where(diff > 0, diff, torch.pow(diff, 2))
         # loss: torch.Tensor = torch.pow(diff, 2)
         normalizer: torch.Tensor = torch.sum(batch.mask - 2*batch.sentence_obj[0].encoder.offset)
-        a = torch.pow(torch.sum(diff) / normalizer, 2)
-        return loss_ignore + a
+        return loss_ignore + 0.01*torch.pow(torch.sum(diff) / normalizer, 2)
 
     @staticmethod
     def _model_out_for_metrics(model_out: torch.Tensor, batch) -> torch.Tensor:
