@@ -22,7 +22,7 @@ class Trainer:
         logging.info(f"Model '{model.model_name}' has been initialized.")
         self.model: BaseModel = model.to(config['general']['device'])
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=config['model']['learning-rate'])
-        self.chunk_loss_ignore = DiceLoss(ignore_index=int(ChunkCode.NOT_RELEVANT), alpha=0.7)
+        self.chunk_loss_ignore = DiceLoss(ignore_index=int(ChunkCode.NOT_RELEVANT), alpha=0.8)
         self.prediction_threshold: float = 0.5
 
         self.memory = Memory()
@@ -118,15 +118,7 @@ class Trainer:
 
     def _get_chunk_loss(self, model_out: torch.Tensor, batch) -> torch.Tensor:
         loss_ignore = self.chunk_loss_ignore(model_out.view([-1, model_out.shape[-1]]), batch.chunk_label.view([-1]))
-        # chunk_label: torch.Tensor = torch.where(batch.chunk_label != int(ChunkCode.NOT_RELEVANT), batch.chunk_label, 0)
-        # true_label_sum: torch.Tensor = torch.sum(chunk_label, dim=-1)
-        # model_out = torch.argmax(model_out, dim=-1)
-        # pred_label_sum: torch.Tensor = torch.sum(model_out, dim=-1)
-        # diff: torch.Tensor = torch.abs(pred_label_sum - true_label_sum)
-        # loss: torch.Tensor = torch.where(diff > 0, diff, torch.pow(diff, 2))
-        # loss: torch.Tensor = torch.pow(diff, 2)
-        # normalizer: torch.Tensor = torch.sum(batch.mask - 2*batch.sentence_obj[0].encoder.offset)
-        return loss_ignore  # + 0.01*torch.pow(torch.sum(diff) / normalizer, 2)
+        return loss_ignore
 
     @staticmethod
     def _model_out_for_metrics(model_out: torch.Tensor, batch) -> torch.Tensor:
@@ -151,7 +143,7 @@ class Trainer:
         logging.info(
             f'Coverage of isolated spans: {ratio}. Extracted spans: {num_predicted}. Total correct spans: {true_num}')
         return {
-            'Ratio': ratio,
+            'ratio': ratio,
             'Extracted spans': num_predicted,
             'Total correct spans': true_num
         }
