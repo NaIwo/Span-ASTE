@@ -23,7 +23,7 @@ class BaseTracker:
 
 
 class WandbTracker(BaseTracker):
-    def __init__(self, project: str, entity: str):
+    def __init__(self, project: str, entity: str, *args, **kwargs):
         super().__init__('WandB Tracker', tracker=wandb)
         self.project: str = project
         self.entity: str = entity
