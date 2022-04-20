@@ -7,7 +7,7 @@ model:
   epochs: 100
   learning-rate: 0.00001
   early-stopping: 10 # num of epochs without improvement
-  best-epoch-objective: recall # you can choose: loss and all of metrics
+  best-epoch-objective: loss # you can choose: loss and all of metrics
   bert:
     source: bert-base-uncased
 encoder:
