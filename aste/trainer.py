@@ -3,79 +3,33 @@ import numpy as np
 from ASTE.aste.models.base_model import BaseModel
 from ASTE.utils import config
 from ASTE.dataset.domain.const import ChunkCode
-from .utils import ignore_index
+from .trainer_tools import Metrics, Memory, BaseTracker
 from .losses import DiceLoss
 
 import torch
-from torchmetrics import FBetaScore, Accuracy, Precision, Recall, F1Score, MetricCollection
+from torchmetrics import FBetaScore, Accuracy, Precision, Recall, F1Score
 from torch.utils.data import DataLoader
-from typing import Optional, Dict, Callable, List, Tuple, Set
+from typing import Optional, Dict, List, Tuple, Set
 import logging
 from datetime import datetime
 from tqdm import tqdm
 import os
 
 
-class Memory:
-    def __init__(self):
-        self.best_epoch: int = 0
-        self.opt_direction: str = 'min' if 'Loss' in config['model']['best-epoch-objective'].capitalize() else 'max'
-        if self.opt_direction == 'min':
-            self.func: Callable = min
-            self.best_value: float = float('inf')
-        elif self.opt_direction == 'max':
-            self.func: Callable = max
-            self.best_value: float = float('-inf')
-        self.patience: Optional[int] = config['model']['early-stopping']
-        self.early_stopping_objective: Optional[str] = None
-        if self.patience is not None:
-            self.early_stopping_objective = config['model']['best-epoch-objective'].capitalize()
-            if 'Loss' in self.early_stopping_objective:
-                self.early_stopping_objective = 'Test_loss'
-
-    def update(self, epoch: int, values_dict: Dict) -> bool:
-        value: float = values_dict[self.early_stopping_objective]
-        improvement: bool = False
-        best_loss = self.func(self.best_value, value)
-        if best_loss != self.best_value:
-            improvement = True
-            self.best_epoch = epoch
-            self.best_value = value
-        return improvement
-
-    def early_stopping(self, epoch: int) -> bool:
-        if self.patience is None:
-            return False
-        return epoch - self.best_epoch > self.patience
-
-
-class Metrics(MetricCollection):
-    def __init__(self, ignore_index: Optional[int] = int(ChunkCode.NOT_RELEVANT), *args, **kwargs):
-        self.ignore_index = ignore_index
-        super().__init__(*args, **kwargs)
-
-    @ignore_index
-    def forward(self, preds, target):
-        super(Metrics, self).forward(preds, target)
-
-    def compute(self):
-        logging.info(f'Metrics: ')
-        metric_name: str
-        score: torch.Tensor
-        computed: Dict = super(Metrics, self).compute()
-        for metric_name, score in computed.items():
-            logging.info(f'\t->\t{metric_name}: {score.item()}')
-        return computed
-
-
 class Trainer:
-    def __init__(self, model: BaseModel, metrics: Optional[Metrics] = None, save_path: Optional[str] = None):
+    def __init__(self, model: BaseModel, metrics: Optional[Metrics] = None, save_path: Optional[str] = None,
+                 tracker: BaseTracker = BaseTracker()):
         logging.info(f"Model '{model.model_name}' has been initialized.")
         self.model: BaseModel = model.to(config['general']['device'])
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=config['model']['learning-rate'])
-        self.chunk_loss_ignore = DiceLoss(ignore_index=int(ChunkCode.NOT_RELEVANT), alpha=0.99)
-        self.chunk_loss_select = DiceLoss(select_index=int(ChunkCode.NOT_RELEVANT), alpha=0.0)
+        self.chunk_loss_ignore = DiceLoss(ignore_index=int(ChunkCode.NOT_RELEVANT), alpha=0.7)
+        self.prediction_threshold: float = 0.5
+
         self.memory = Memory()
+        self.tracker: BaseTracker = tracker
+        self.tracker.add_config({'Chunk Loss': {'alpha': self.chunk_loss_ignore.alpha,
+                                                'ignore_index': self.chunk_loss_ignore.ignore_index}})
+
         if metrics is None:
             self.metrics = Metrics(metrics=[
                 Precision(num_classes=1, multiclass=False),
@@ -93,12 +47,21 @@ class Trainer:
         else:
             self.save_path = save_path
 
+    def set_prediction_threshold(self, prediction_threshold) -> None:
+        self.prediction_threshold = prediction_threshold
+        logging.info(f'Prediction threshold updated to: {self.prediction_threshold}')
+
     def train(self, train_data: DataLoader, dev_data: Optional[DataLoader] = None) -> None:
+        logging.info(f"Tracker '{self.tracker.name}' has been initialized.")
+        self.tracker.init()
+        self.tracker.watch(self.model)
+
         os.makedirs(self.save_path[:self.save_path.rfind(os.sep)], exist_ok=False)
         training_start_time: datetime.time = datetime.now()
         logging.info(f'Training start at time: {training_start_time}')
         for epoch in range(config['model']['epochs']):
             epoch_loss = self._training_epoch(train_data)
+            self.tracker.log({'Train Loss': epoch_loss})
             logging.info(f"Epoch: {epoch + 1}/{config['model']['epochs']}. Epoch loss: {epoch_loss:.3f}")
             early_stopping: bool = self._eval(epoch=epoch, dev_data=dev_data)
             if early_stopping:
@@ -126,6 +89,7 @@ class Trainer:
     def _eval(self, epoch: int, dev_data: DataLoader) -> bool:
         if dev_data is not None:
             values_dict: Dict = self.test(dev_data)
+            self.tracker.log(values_dict)
             improvement: bool = self.memory.update(epoch, values_dict)
             if improvement:
                 logging.info(f'Improvement has occurred. Saving the model in the path: {self.save_path}')
@@ -149,21 +113,20 @@ class Trainer:
             metric_results: Dict = self.metrics.compute()
             return_values.update(metric_results)
             self.metrics.reset()
-        return_values['Test_loss'] = test_loss / len(test_data)
+        return_values['Test loss'] = test_loss / len(test_data)
         return return_values
 
     def _get_chunk_loss(self, model_out: torch.Tensor, batch) -> torch.Tensor:
         loss_ignore = self.chunk_loss_ignore(model_out.view([-1, model_out.shape[-1]]), batch.chunk_label.view([-1]))
-        # loss_select = self.chunk_loss_select(model_out.view([-1, model_out.shape[-1]]), batch.chunk_label.view([-1]), mask=batch.sub_words_mask.view([-1, 1]))
-        chunk_label: torch.Tensor = torch.where(batch.chunk_label != int(ChunkCode.NOT_RELEVANT), batch.chunk_label, 0)
-        true_label_sum: torch.Tensor = torch.sum(chunk_label, dim=-1)
-        model_out = torch.argmax(model_out, dim=-1)
-        pred_label_sum: torch.Tensor = torch.sum(model_out, dim=-1)
-        diff: torch.Tensor = torch.abs(pred_label_sum - true_label_sum)
+        # chunk_label: torch.Tensor = torch.where(batch.chunk_label != int(ChunkCode.NOT_RELEVANT), batch.chunk_label, 0)
+        # true_label_sum: torch.Tensor = torch.sum(chunk_label, dim=-1)
+        # model_out = torch.argmax(model_out, dim=-1)
+        # pred_label_sum: torch.Tensor = torch.sum(model_out, dim=-1)
+        # diff: torch.Tensor = torch.abs(pred_label_sum - true_label_sum)
         # loss: torch.Tensor = torch.where(diff > 0, diff, torch.pow(diff, 2))
         # loss: torch.Tensor = torch.pow(diff, 2)
-        normalizer: torch.Tensor = torch.sum(batch.mask - 2*batch.sentence_obj[0].encoder.offset)
-        return loss_ignore + 0.01*torch.pow(torch.sum(diff) / normalizer, 2)
+        # normalizer: torch.Tensor = torch.sum(batch.mask - 2*batch.sentence_obj[0].encoder.offset)
+        return loss_ignore  # + 0.01*torch.pow(torch.sum(diff) / normalizer, 2)
 
     @staticmethod
     def _model_out_for_metrics(model_out: torch.Tensor, batch) -> torch.Tensor:
@@ -173,7 +136,7 @@ class Trainer:
         sub_mask: torch.Tensor = batch.sub_words_mask.bool().view([-1, 1])
         return torch.where(sub_mask, model_out, fill_value)
 
-    def check_coverage_detected_spans(self, data: DataLoader) -> float:
+    def check_coverage_detected_spans(self, data: DataLoader) -> Dict:
         num_predicted: int = 0
         num_correct_predicted: int = 0
         true_num: int = 0
@@ -187,13 +150,16 @@ class Trainer:
         ratio: float = num_correct_predicted / true_num
         logging.info(
             f'Coverage of isolated spans: {ratio}. Extracted spans: {num_predicted}. Total correct spans: {true_num}')
-        return ratio
+        return {
+            'Ratio': ratio,
+            'Extracted spans': num_predicted,
+            'Total correct spans': true_num
+        }
 
     def _get_predicted_spans(self, sample) -> np.ndarray:
         offset: int = sample.sentence_obj[0].encoder.offset
         predictions: np.ndarray = self.predict(sample.sentence, sample.mask).cpu().numpy()[0]
-        # predictions = np.argmax(predictions, axis=-1)
-        predictions = np.where(predictions[:, 1] >= 0.5, 1, 0)
+        predictions = np.where(predictions[:, 1] >= self.prediction_threshold, 1, 0)
         predictions = predictions[:sample.sentence_obj[0].encoded_sentence_length]
         sub_mask: torch.Tensor = sample.sub_words_mask.cpu().numpy()[0][
                                  :sample.sentence_obj[0].encoded_sentence_length]
