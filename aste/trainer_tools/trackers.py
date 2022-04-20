@@ -5,7 +5,7 @@ from typing import Dict
 
 
 class BaseTracker:
-    def __init__(self, name: str = 'Base Tracker', tracker=None):
+    def __init__(self, name: str = 'Base Tracker', tracker=None, *args, **kwargs):
         self.name: str = name
         self.tracker = tracker
 
