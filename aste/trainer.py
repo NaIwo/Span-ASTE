@@ -122,7 +122,7 @@ class Trainer:
         true_label_sum: torch.Tensor = torch.sum(chunk_label, dim=-1)
         pred_label_sum: torch.Tensor = torch.sum(model_out[..., 1], dim=-1)
         diff: torch.Tensor = torch.abs(pred_label_sum - true_label_sum).type(torch.float)
-        return loss_ignore + 0.001*torch.mean(diff)
+        return loss_ignore + 0.001 * torch.mean(diff)
 
     @staticmethod
     def _model_out_for_metrics(model_out: torch.Tensor, batch) -> torch.Tensor:
@@ -157,7 +157,7 @@ class Trainer:
         predictions: np.ndarray = self.predict(sample.sentence, sample.mask).cpu().numpy()[0]
         predictions = np.where(predictions[:, 1] >= self.prediction_threshold, 1, 0)
         predictions = predictions[:sample.sentence_obj[0].encoded_sentence_length]
-        sub_mask: torch.Tensor = sample.sub_words_mask.cpu().numpy()[0][
+        sub_mask: np.ndarray = sample.sub_words_mask.cpu().numpy()[0][
                                  :sample.sentence_obj[0].encoded_sentence_length]
         # Prediction help - if a token consists of several sub-tokens, we certainly do not split in those sub-tokens.
         predictions = np.where(sub_mask, predictions, int(ChunkCode.NOT_SPLIT))
