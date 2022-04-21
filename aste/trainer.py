@@ -24,6 +24,7 @@ class Trainer:
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=config['model']['learning-rate'])
         self.chunk_loss_ignore = DiceLoss(ignore_index=int(ChunkCode.NOT_RELEVANT), alpha=0.)
         self.prediction_threshold: float = 0.5
+        self.chunk_loss_lambda: float = 0.001
 
         self.memory = Memory()
         self.tracker: BaseTracker = tracker
@@ -122,7 +123,7 @@ class Trainer:
         true_label_sum: torch.Tensor = torch.sum(chunk_label, dim=-1)
         pred_label_sum: torch.Tensor = torch.sum(model_out[..., 1], dim=-1)
         diff: torch.Tensor = torch.abs(pred_label_sum - true_label_sum).type(torch.float)
-        return loss_ignore + 0.001 * torch.mean(diff)
+        return loss_ignore + self.chunk_loss_lambda * torch.mean(diff)
 
     @staticmethod
     def _model_out_for_metrics(model_out: torch.Tensor, batch) -> torch.Tensor:
