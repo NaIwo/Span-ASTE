@@ -3,7 +3,6 @@ from torch.nn import Module
 from typing import List
 
 from .base_agg import BaseAggregator
-from ASTE.utils import config
 
 
 class EndPointAggregator(BaseAggregator, Module):
