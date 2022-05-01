@@ -1,15 +1,14 @@
-import numpy as np
-
-from ASTE.aste.models.base_model import BaseModel
+from ASTE.aste.models import BaseModel, ModelOutput
 from ASTE.utils import config
 from ASTE.dataset.domain.const import ChunkCode
 from .trainer_tools import Metrics, Memory, BaseTracker
 from .losses import DiceLoss
+from ASTE.dataset.reader import Batch
 
 import torch
 from torchmetrics import FBetaScore, Accuracy, Precision, Recall, F1Score
 from torch.utils.data import DataLoader
-from typing import Optional, Dict, List, Tuple, Set
+from typing import Optional, Dict, List, Tuple
 import logging
 from datetime import datetime
 from tqdm import tqdm
@@ -31,8 +30,13 @@ class Trainer:
         self.tracker.add_config({'Chunk Loss': {'alpha': self.chunk_loss_ignore.alpha,
                                                 'ignore_index': self.chunk_loss_ignore.ignore_index}})
 
+        self.metrics: Metrics = self._get_metrics(metrics)
+        self.save_path: str = self._get_save_path(save_path)
+
+    @staticmethod
+    def _get_metrics(metrics: Optional[Metrics]) -> Metrics:
         if metrics is None:
-            self.metrics = Metrics(metrics=[
+            return Metrics(metrics=[
                 Precision(num_classes=1, multiclass=False),
                 Recall(num_classes=1, multiclass=False),
                 Accuracy(num_classes=1, multiclass=False),
@@ -40,13 +44,14 @@ class Trainer:
                 F1Score(num_classes=1, multiclass=False)
             ]).to(config['general']['device'])
         else:
-            self.metrics = metrics.to(config['general']['device'])
+            return metrics.to(config['general']['device'])
 
+    def _get_save_path(self, save_path: Optional[str]) -> str:
         if save_path is None:
-            self.save_path = os.path.join(os.getcwd(), 'results', datetime.now().strftime("%Y%m%d-%H%M%S"),
-                                          f'{self.model.model_name.replace(" ", "_").lower()}.pth')
+            return os.path.join(os.getcwd(), 'results', datetime.now().strftime("%Y%m%d-%H%M%S"),
+                                f'{self.model.model_name.replace(" ", "_").lower()}.pth')
         else:
-            self.save_path = save_path
+            return save_path
 
     def set_prediction_threshold(self, prediction_threshold) -> None:
         self.prediction_threshold = prediction_threshold
@@ -77,9 +82,12 @@ class Trainer:
     def _training_epoch(self, train_data: DataLoader) -> float:
         self.model.train()
         epoch_loss = 0.
+
+        batch_idx: int
+        batch: Batch
         for batch_idx, batch in enumerate(bar := tqdm(train_data)):
-            model_out: torch.Tensor = self.model(batch.sentence, batch.mask)
-            loss = self._get_chunk_loss(model_out, batch)
+            model_out: ModelOutput = self.model(batch)
+            loss = self._get_chunk_loss(model_out.chunker_output, batch)
             loss.backward()
             self.optimizer.step()
             self.optimizer.zero_grad()
@@ -105,11 +113,14 @@ class Trainer:
         logging.info(f'Test started...')
         test_loss: float = 0.
         with torch.no_grad():
+            batch: Batch
             for batch in tqdm(test_data):
-                model_out: torch.Tensor = self.model(batch.sentence, batch.mask)
-                test_loss += self._get_chunk_loss(model_out, batch)
-                self.metrics(self._model_out_for_metrics(model_out.view([-1, model_out.shape[-1]]), batch),
-                             batch.chunk_label.view([-1]))
+                model_out: ModelOutput = self.model(batch)
+                test_loss += self._get_chunk_loss(model_out.chunker_output, batch)
+                self.metrics(
+                    self._chunker_out_for_metrics(
+                        model_out.chunker_output.view([-1, model_out.chunker_output.shape[-1]]), batch),
+                    batch.chunk_label.view([-1]))
             logging.info(f'Test loss: {test_loss / len(test_data):.3f}')
             metric_results: Dict = self.metrics.compute()
             return_values.update(metric_results)
@@ -126,12 +137,12 @@ class Trainer:
         return loss_ignore + self.chunk_loss_lambda * torch.mean(diff)
 
     @staticmethod
-    def _model_out_for_metrics(model_out: torch.Tensor, batch) -> torch.Tensor:
+    def _chunker_out_for_metrics(chunker_out: torch.Tensor, batch) -> torch.Tensor:
         # Prediction help - if a token consists of several sub-tokens, we certainly do not split in those sub-tokens.
-        fill_value: torch.Tensor = torch.zeros(model_out.shape[-1]).to(config['general']['device'])
+        fill_value: torch.Tensor = torch.zeros(chunker_out.shape[-1]).to(config['general']['device'])
         fill_value[int(ChunkCode.NOT_SPLIT)] = 1.
         sub_mask: torch.Tensor = batch.sub_words_mask.bool().view([-1, 1])
-        return torch.where(sub_mask, model_out, fill_value)
+        return torch.where(sub_mask, chunker_out, fill_value)
 
     def check_coverage_detected_spans(self, data: DataLoader) -> Dict:
         num_predicted: int = 0
@@ -139,45 +150,26 @@ class Trainer:
         true_num: int = 0
         for batch in tqdm(data):
             for sample in batch:
-                predicted_spans = self._get_predicted_spans(sample)
+                model_output: ModelOutput = self.predict(sample)
                 true_spans: List[Tuple[int, int]] = sample.sentence_obj[0].get_all_unordered_spans()
-                num_correct_predicted += self._count_intersection(true_spans, predicted_spans)
-                num_predicted += predicted_spans.shape[0]
+                true_spans: torch.Tensor = torch.Tensor(true_spans).to(config['general']['device'])
+                num_correct_predicted += self._count_intersection(true_spans, model_output.predicted_spans[0])
+                num_predicted += model_output.predicted_spans[0].shape[0]
                 true_num += len(set(true_spans))
         ratio: float = num_correct_predicted / true_num
         logging.info(
             f'Coverage of isolated spans: {ratio}. Extracted spans: {num_predicted}. Total correct spans: {true_num}')
         return {
-            'ratio': ratio,
+            'Ratio': ratio,
             'Extracted spans': num_predicted,
             'Total correct spans': true_num
         }
 
-    def _get_predicted_spans(self, sample) -> np.ndarray:
-        offset: int = sample.sentence_obj[0].encoder.offset
-        predictions: np.ndarray = self.predict(sample.sentence, sample.mask).cpu().numpy()[0]
-        predictions = np.where(predictions[:, 1] >= self.prediction_threshold, 1, 0)
-        predictions = predictions[:sample.sentence_obj[0].encoded_sentence_length]
-        sub_mask: np.ndarray = sample.sub_words_mask.cpu().numpy()[0][
-                                 :sample.sentence_obj[0].encoded_sentence_length]
-        # Prediction help - if a token consists of several sub-tokens, we certainly do not split in those sub-tokens.
-        predictions = np.where(sub_mask, predictions, int(ChunkCode.NOT_SPLIT))
-        # Start and end of spans are the same as start and end of sentence
-        predictions = np.pad(np.where(predictions)[0], 1, constant_values=(offset, len(predictions) - offset))
-        predicted_spans: np.ndarray = np.lib.stride_tricks.sliding_window_view(predictions, 2)
-        # lib.stride_tricks return view of array and we can not manage them as normal array with new shape.
-        predicted_spans = np.array(predicted_spans)
-        # Because we perform split ->before<- selected word.
-        predicted_spans[:, 1] -= 1
-        # This deletion is due to offset in padding. Some spans can started from this offset and
-        # we could end up with wrong extracted span.
-        return np.delete(predicted_spans, np.where(predicted_spans[:, 0] > predicted_spans[:, 1]), axis=0)
-
     @staticmethod
-    def _count_intersection(true_spans: List[Tuple[int, int]], predicted_spans: np.ndarray) -> int:
-        predicted_spans: Set = set([(row[0], row[1]) for row in predicted_spans])
-        true_spans: Set = set(true_spans)
-        return len(predicted_spans.intersection(true_spans))
+    def _count_intersection(true_spans: torch.Tensor, predicted_spans: torch.Tensor) -> int:
+        combined = torch.cat((true_spans, predicted_spans))
+        uniques, counts = combined.unique(return_counts=True, dim=0)
+        return uniques[counts > 1].shape[0]
 
     def save_model(self, save_path: str) -> None:
         torch.save(self.model.state_dict(), save_path)
@@ -185,8 +177,8 @@ class Trainer:
     def load_model(self, save_path: str) -> None:
         self.model.load_state_dict(torch.load(save_path))
 
-    def predict(self, sentence: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    def predict(self, sample: Batch) -> ModelOutput:
         self.model.eval()
         with torch.no_grad():
-            out: torch.Tensor = self.model(sentence, mask)
+            out: ModelOutput = self.model(sample)
         return out

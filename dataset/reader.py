@@ -64,11 +64,11 @@ class DatasetLoader:
         mask = self._construct_mask(lengths)
         idx = torch.argsort(lengths, descending=True)
 
-        return _Batch(sentence_obj=list(np.array(sentence_objs)[idx]),
-                      sentence=sentence_batch[idx].to(config['general']['device']),
-                      chunk_label=chunk_batch[idx].to(config['general']['device']),
-                      sub_words_masks=sub_words_masks_batch[idx].to(config['general']['device']),
-                      mask=mask[idx].to(config['general']['device']))
+        return Batch(sentence_obj=list(np.array(sentence_objs)[idx]),
+                     sentence=sentence_batch[idx].to(config['general']['device']),
+                     chunk_label=chunk_batch[idx].to(config['general']['device']),
+                     sub_words_masks=sub_words_masks_batch[idx].to(config['general']['device']),
+                     mask=mask[idx].to(config['general']['device']))
 
     @staticmethod
     def _construct_mask(lengths: torch.Tensor) -> torch.Tensor:
@@ -77,7 +77,7 @@ class DatasetLoader:
         return (mask < lengths.unsqueeze(1)).type(torch.int8)
 
 
-class _Batch:
+class Batch:
     def __init__(self, sentence_obj: [Sentence], sentence: torch.Tensor, chunk_label: torch.Tensor,
                  sub_words_masks: torch.Tensor, mask: torch.Tensor):
         self.sentence_obj: List[Sentence] = sentence_obj
@@ -94,8 +94,8 @@ class _Batch:
         self.num += 1
         if self.num >= len(self.sentence_obj):
             raise StopIteration
-        return _Batch([self.sentence_obj[self.num]],
-                      self.sentence[self.num].unsqueeze(0),
-                      self.chunk_label[self.num].unsqueeze(0),
-                      self.sub_words_mask[self.num].unsqueeze(0),
-                      self.mask[self.num].unsqueeze(0))
+        return Batch([self.sentence_obj[self.num]],
+                     self.sentence[self.num].unsqueeze(0),
+                     self.chunk_label[self.num].unsqueeze(0),
+                     self.sub_words_mask[self.num].unsqueeze(0),
+                     self.mask[self.num].unsqueeze(0))

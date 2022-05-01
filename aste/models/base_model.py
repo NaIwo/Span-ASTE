@@ -1,4 +1,5 @@
 import torch
+from typing import Any
 
 
 class BaseModel(torch.nn.Module):
@@ -6,5 +7,5 @@ class BaseModel(torch.nn.Module):
         super().__init__()
         self.model_name = model_name
 
-    def forward(self, sentence: torch.Tensor, mask: torch.Tensor):
+    def forward(self, *args, **kwargs) -> Any:
         raise NotImplemented
