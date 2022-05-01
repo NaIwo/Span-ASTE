@@ -22,8 +22,9 @@ class Trainer:
         logging.info(f"Model '{model.model_name}' has been initialized.")
         self.model: BaseModel = model.to(config['general']['device'])
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=config['model']['learning-rate'])
-        self.chunk_loss_ignore = DiceLoss(ignore_index=int(ChunkCode.NOT_RELEVANT), alpha=0.8)
+        self.chunk_loss_ignore = DiceLoss(ignore_index=int(ChunkCode.NOT_RELEVANT), alpha=0.)
         self.prediction_threshold: float = 0.5
+        self.chunk_loss_lambda: float = 0.001
 
         self.memory = Memory()
         self.tracker: BaseTracker = tracker
@@ -118,7 +119,11 @@ class Trainer:
 
     def _get_chunk_loss(self, model_out: torch.Tensor, batch) -> torch.Tensor:
         loss_ignore = self.chunk_loss_ignore(model_out.view([-1, model_out.shape[-1]]), batch.chunk_label.view([-1]))
-        return loss_ignore
+        chunk_label: torch.Tensor = torch.where(batch.chunk_label != int(ChunkCode.NOT_RELEVANT), batch.chunk_label, 0)
+        true_label_sum: torch.Tensor = torch.sum(chunk_label, dim=-1)
+        pred_label_sum: torch.Tensor = torch.sum(model_out[..., 1], dim=-1)
+        diff: torch.Tensor = torch.abs(pred_label_sum - true_label_sum).type(torch.float)
+        return loss_ignore + self.chunk_loss_lambda * torch.mean(diff)
 
     @staticmethod
     def _model_out_for_metrics(model_out: torch.Tensor, batch) -> torch.Tensor:
@@ -153,7 +158,7 @@ class Trainer:
         predictions: np.ndarray = self.predict(sample.sentence, sample.mask).cpu().numpy()[0]
         predictions = np.where(predictions[:, 1] >= self.prediction_threshold, 1, 0)
         predictions = predictions[:sample.sentence_obj[0].encoded_sentence_length]
-        sub_mask: torch.Tensor = sample.sub_words_mask.cpu().numpy()[0][
+        sub_mask: np.ndarray = sample.sub_words_mask.cpu().numpy()[0][
                                  :sample.sentence_obj[0].encoded_sentence_length]
         # Prediction help - if a token consists of several sub-tokens, we certainly do not split in those sub-tokens.
         predictions = np.where(sub_mask, predictions, int(ChunkCode.NOT_SPLIT))
