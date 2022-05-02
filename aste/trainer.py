@@ -5,7 +5,7 @@ from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
 
 import torch
 from torch.utils.data import DataLoader
-from typing import Optional, Dict, List, Tuple, Union
+from typing import Optional, Dict, List, Tuple, Union, Set
 import logging
 from datetime import datetime
 from tqdm import tqdm
@@ -120,7 +120,6 @@ class Trainer:
             for sample in batch:
                 model_output: ModelOutput = self.predict(sample)
                 true_spans: List[Tuple[int, int]] = sample.sentence_obj[0].get_all_unordered_spans()
-                true_spans: torch.Tensor = torch.Tensor(true_spans).to(config['general']['device'])
                 num_correct_predicted += self._count_intersection(true_spans, model_output.predicted_spans[0])
                 num_predicted += model_output.predicted_spans[0].shape[0]
                 true_num += len(set(true_spans))
@@ -134,10 +133,10 @@ class Trainer:
         }
 
     @staticmethod
-    def _count_intersection(true_spans: torch.Tensor, predicted_spans: torch.Tensor) -> int:
-        combined = torch.cat((true_spans, predicted_spans))
-        uniques, counts = combined.unique(return_counts=True, dim=0)
-        return uniques[counts > 1].shape[0]
+    def _count_intersection(true_spans: List[Tuple[int, int]], predicted_spans: torch.Tensor) -> int:
+        predicted_spans: Set = set([(int(row[0]), int(row[1])) for row in predicted_spans])
+        true_spans: Set = set(true_spans)
+        return len(predicted_spans.intersection(true_spans))
 
     def save_model(self, save_path: str) -> None:
         torch.save(self.model.state_dict(), save_path)

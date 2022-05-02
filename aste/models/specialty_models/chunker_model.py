@@ -45,7 +45,7 @@ class ChunkerModel(BaseModel):
 
     def _get_spans_from_single_sample(self, sample: Batch, prediction: torch.Tensor) -> torch.Tensor:
         prediction = self._get_chunk_indexes(sample, prediction)
-        predicted_spans: torch.Tensor = prediction.unfold(0, 2, 1)
+        predicted_spans: torch.Tensor = prediction.unfold(0, 2, 1).clone()
         # Because we perform split ->before<- selected word.
         predicted_spans[:, 1] -= 1
         # This deletion is due to offset in padding. Some spans can started from this offset and
