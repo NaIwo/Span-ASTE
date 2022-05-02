@@ -1,11 +1,11 @@
 from ASTE.utils import config
-from .tools import Metrics, Memory, BaseTracker
+from .tools import Memory, BaseTracker
 from ASTE.dataset.reader import Batch
 from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
 
 import torch
 from torch.utils.data import DataLoader
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, List, Tuple, Union
 import logging
 from datetime import datetime
 from tqdm import tqdm
@@ -47,7 +47,7 @@ class Trainer:
         logging.info(f'Training start at time: {training_start_time}')
         for epoch in range(config['model']['epochs']):
             epoch_loss: ModelLoss = self._training_epoch(train_data)
-            self.tracker.log({'Train Loss': epoch_loss})
+            self.tracker.log({'Train Loss': epoch_loss.logs})
             logging.info(f"Epoch: {epoch + 1}/{config['model']['epochs']}. Epoch loss: {epoch_loss}")
             early_stopping: bool = self._eval(epoch=epoch, dev_data=dev_data)
             if early_stopping:
@@ -66,9 +66,8 @@ class Trainer:
         batch_idx: int
         batch: Batch
         for batch_idx, batch in enumerate(bar := tqdm(train_data)):
-            model_out: ModelOutput
-            loss: ModelLoss
-            model_out, loss = self.model(batch)
+            model_out: ModelOutput = self.model(batch)
+            loss: ModelLoss = self.model.get_loss(model_out)
             loss.backward()
             self.optimizer.step()
             self.optimizer.zero_grad()
@@ -78,8 +77,12 @@ class Trainer:
 
     def _eval(self, epoch: int, dev_data: DataLoader) -> bool:
         if dev_data is not None:
-            values_dict: Dict = self.test(dev_data)
-            self.tracker.log(values_dict)
+            values_dict: Dict = dict()
+            eval_out: Dict[str, Union[ModelOutput, ModelLoss, ModelMetric]] = self.test(dev_data)
+            values_dict.update(eval_out[ModelMetric.NAME].chunker_metric)
+            values_dict['Test loss'] = eval_out[ModelLoss.NAME].full_loss
+            self.tracker.log({'Test Loss': eval_out[ModelLoss.NAME].logs,
+                              'Metrics': eval_out[ModelMetric.NAME].logs})
             improvement: bool = self.memory.update(epoch, values_dict)
             if improvement:
                 logging.info(f'Improvement has occurred. Saving the model in the path: {self.save_path}')
@@ -88,23 +91,26 @@ class Trainer:
                 return True
         return False
 
-    def test(self, test_data: DataLoader) -> Dict:
+    def test(self, test_data: DataLoader) -> Dict[str, Union[ModelOutput, ModelLoss, ModelMetric]]:
         self.model.eval()
-        return_values: Dict = {}
         logging.info(f'Test started...')
         test_loss = ModelLoss()
         with torch.no_grad():
+            batch_idx: int
             batch: Batch
-            for batch in tqdm(test_data):
-                model_out: ModelOutput
-                loss: ModelLoss
-                model_out, loss = self.model(batch, compute_metrics=True)
+            for batch_idx, batch in enumerate(bar := tqdm(test_data)):
+                model_out: ModelOutput = self.model(batch, compute_metrics=True)
+                loss: ModelLoss = self.model.get_loss(model_out)
                 test_loss += loss
+                bar.set_description(f'Test Loss: {test_loss / (batch_idx + 1)} ')
             logging.info(f'Test loss: {test_loss / len(test_data)}')
             metrics: ModelMetric = self.model.get_metrics_and_reset()
-            return_values.update(metrics.chunker_metric)
-        return_values['Test loss'] = test_loss.full_loss / len(test_data)
-        return return_values
+        test_loss = test_loss / len(test_data)
+        return {
+            ModelOutput.NAME: model_out,
+            ModelLoss.NAME: test_loss,
+            ModelMetric.NAME: metrics
+        }
 
     def check_coverage_detected_spans(self, data: DataLoader) -> Dict:
         num_predicted: int = 0
@@ -112,8 +118,7 @@ class Trainer:
         true_num: int = 0
         for batch in tqdm(data):
             for sample in batch:
-                model_output: ModelOutput
-                model_output, _, _ = self.predict(sample)
+                model_output: ModelOutput = self.predict(sample)
                 true_spans: List[Tuple[int, int]] = sample.sentence_obj[0].get_all_unordered_spans()
                 true_spans: torch.Tensor = torch.Tensor(true_spans).to(config['general']['device'])
                 num_correct_predicted += self._count_intersection(true_spans, model_output.predicted_spans[0])
@@ -140,12 +145,8 @@ class Trainer:
     def load_model(self, save_path: str) -> None:
         self.model.load_state_dict(torch.load(save_path))
 
-    def predict(self, sample: Batch) -> Tuple[ModelOutput, ModelLoss, ModelMetric]:
+    def predict(self, sample: Batch) -> ModelOutput:
         self.model.eval()
         with torch.no_grad():
-            out: ModelOutput
-            loss: ModelLoss
-            metrics: ModelMetric
-            out, loss = self.model(sample, compute_metrics=True)
-            metrics: ModelMetric = self.model.get_metrics_and_reset()
-        return out, loss, metrics
+            out: ModelOutput = self.model(sample)
+        return out

@@ -26,7 +26,7 @@ class BertBaseModel(BaseModel):
         self.chunker: BaseModel = ChunkerModel()
         self.aggregator: BaseAggregator = EndPointAggregator()
 
-    def forward(self, batch: Batch, compute_metrics: bool = False) -> Tuple[ModelOutput, ModelLoss]:
+    def forward(self, batch: Batch, compute_metrics: bool = False) -> ModelOutput:
         embeddings: torch.Tensor = self.embeddings_layer(batch.sentence, batch.mask)
 
         chunker_output: torch.Tensor = self.chunker(embeddings)
@@ -37,9 +37,12 @@ class BertBaseModel(BaseModel):
         if compute_metrics:
             self.chunker.update_metrics(batch, chunker_output)
 
-        return ModelOutput(chunker_output=chunker_output,
-                           predicted_spans=predicted_spans), \
-            ModelLoss(chunker_loss=self.chunker.loss(batch, chunker_output))
+        return ModelOutput(batch=batch,
+                           chunker_output=chunker_output,
+                           predicted_spans=predicted_spans)
+
+    def get_loss(self, model_out: ModelOutput) -> ModelLoss:
+        return ModelLoss(chunker_loss=self.chunker.loss(model_out.batch, model_out.chunker_output))
 
     def get_metrics_and_reset(self) -> ModelMetric:
         metrics: ModelMetric = self.get_metrics()
