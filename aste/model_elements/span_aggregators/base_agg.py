@@ -4,8 +4,9 @@ from typing import List
 
 
 class BaseAggregator:
-    def __init__(self, name: str = 'base aggregator'):
+    def __init__(self, embeddings_dim: int, name: str = 'base aggregator'):
         self.name: str = name
+        self.embeddings_dim: int = embeddings_dim
 
     def aggregate(self, embeddings: torch.Tensor, spans: List[torch.Tensor], *args, **kwargs) -> torch.Tensor:
         raise NotImplementedError

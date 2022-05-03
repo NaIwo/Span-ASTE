@@ -1,5 +1,4 @@
 from enum import IntEnum
-from typing import Dict
 
 
 class ChunkCode(IntEnum):
@@ -8,8 +7,11 @@ class ChunkCode(IntEnum):
     NOT_SPLIT: int = 0
 
 
-SENTIMENT_MAPPER: Dict = {
-    'POS': 1,
-    'NEU': 0,
-    'NEG': -1
-}
+class ASTELabels(IntEnum):
+    POS: int = 5
+    NEU: int = 4
+    NEG: int = 3
+    OPINION: int = 2
+    ASPECT: int = 1
+    NOT_PAIR: int = 0
+    NOT_RELEVANT: int = -1

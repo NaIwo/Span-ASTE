@@ -10,9 +10,14 @@ model:
   best-epoch-objective: recall # you can choose: loss and all of metrics
   bert:
     source: bert-base-uncased
+  aggregators:
+    endpoint:
+      distance-embedding-dim: 3
   chunker:
     dice-loss-alpha: 0.0
     lambda-factor: 0.001
+  pair-extractor:
+    dice-loss-alpha: 0.5
 encoder:
   bert:
     source: bert-base-uncased

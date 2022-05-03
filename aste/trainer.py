@@ -102,7 +102,7 @@ class Trainer:
                 model_out: ModelOutput = self.model(batch, compute_metrics=True)
                 loss: ModelLoss = self.model.get_loss(model_out)
                 test_loss += loss
-                bar.set_description(f'Test Loss: {test_loss / (batch_idx + 1)} ')
+                bar.set_description(f'Test Loss: {test_loss / (batch_idx + 1)}')
             logging.info(f'Test loss: {test_loss / len(test_data)}')
             metrics: ModelMetric = self.model.get_metrics_and_reset()
         test_loss = test_loss / len(test_data)
@@ -117,12 +117,14 @@ class Trainer:
         num_correct_predicted: int = 0
         true_num: int = 0
         for batch in tqdm(data):
+            sample: Batch
             for sample in batch:
                 model_output: ModelOutput = self.predict(sample)
-                true_spans: List[Tuple[int, int]] = sample.sentence_obj[0].get_all_unordered_spans()
+                true_spans: torch.Tensor = torch.cat([sample.aspect_spans[0], sample.opinion_spans[0]], dim=0).unique(
+                    dim=0)
                 num_correct_predicted += self._count_intersection(true_spans, model_output.predicted_spans[0])
                 num_predicted += model_output.predicted_spans[0].shape[0]
-                true_num += len(set(true_spans))
+                true_num += true_spans.shape[0] - int(-1 in true_spans)
         ratio: float = num_correct_predicted / true_num
         logging.info(
             f'Coverage of isolated spans: {ratio}. Extracted spans: {num_predicted}. Total correct spans: {true_num}')
@@ -133,10 +135,10 @@ class Trainer:
         }
 
     @staticmethod
-    def _count_intersection(true_spans: List[Tuple[int, int]], predicted_spans: torch.Tensor) -> int:
-        predicted_spans: Set = set([(int(row[0]), int(row[1])) for row in predicted_spans])
-        true_spans: Set = set(true_spans)
-        return len(predicted_spans.intersection(true_spans))
+    def _count_intersection(true_spans: torch.Tensor, predicted_spans: torch.Tensor) -> int:
+        all_spans: torch.Tensor = torch.cat([true_spans, predicted_spans], dim=0)
+        uniques, counts = torch.unique(all_spans, return_counts=True, dim=0)
+        return uniques[counts > 1].shape[0]
 
     def save_model(self, save_path: str) -> None:
         torch.save(self.model.state_dict(), save_path)

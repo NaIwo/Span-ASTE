@@ -28,8 +28,8 @@ def select_index(func):
             target_selected = target[indices]
             if 'mask' in kwargs.keys():
                 kwargs['mask'] = kwargs['mask'][indices]
-            if len(torch.unique(target_selected)) == 1 and int(ChunkCode.NOT_RELEVANT) in target_selected:
-                target_selected = torch.full_like(target_selected, int(ChunkCode.NOT_SPLIT))
+            if len(torch.unique(target_selected)) == 1 and ChunkCode.NOT_RELEVANT in target_selected:
+                target_selected = torch.full_like(target_selected, ChunkCode.NOT_SPLIT)
             res = func(self, preds_selected, target_selected, *args, **kwargs)
         else:
             res = func(self, preds, target, *args, **kwargs)

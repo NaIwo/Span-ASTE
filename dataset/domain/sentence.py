@@ -1,5 +1,4 @@
 from ASTE.dataset.encoders.base_encoder import BaseEncoder
-from .const import SENTIMENT_MAPPER
 
 from ast import literal_eval
 from typing import List, Tuple, TypeVar
@@ -24,7 +23,7 @@ class Sentence:
         word: List[int]
         for word in self.encoded_words_in_sentence:
             self.sub_words_lengths.append(len(word) - 1)
-            self.sub_words_mask += [1] + [0]*(len(word)-1)
+            self.sub_words_mask += [1] + [0] * (len(word) - 1)
         offset: List[int] = [0] * self.encoder.offset
         self.sub_words_mask = offset + self.sub_words_mask + offset
 
@@ -35,19 +34,23 @@ class Sentence:
         for triplet_info in triplets_info:
             self.triplets.append(Triplet.from_triplet_info(triplet_info, self.sentence))
 
-    def get_all_unordered_spans(self) -> List[Tuple[int, int]]:
-        all_spans: List = list()
+    def get_aspect_spans(self) -> List[Tuple[int, int]]:
+        return self._get_selected_spans('aspect_span')
+
+    def get_opinion_spans(self) -> List[Tuple[int, int]]:
+        return self._get_selected_spans('opinion_span')
+
+    def _get_selected_spans(self, span_source: str) -> List[Tuple[int, int]]:
+        assert span_source in ('aspect_span', 'opinion_span'), f'Invalid span source: {span_source}!'
+        spans: List = list()
         triplet: Triplet
         for triplet in self.triplets:
             # +1)-1 -> If end index is the same as start_idx and word is constructed from sub-tokens
             # end index is shifted by number equals to this sub-words count.
-            aspect_span: Tuple = (self.get_index_after_encoding(triplet.aspect_span.start_idx),
-                                  self.get_index_after_encoding(triplet.aspect_span.end_idx+1)-1)
-            opinion_span: Tuple = (self.get_index_after_encoding(triplet.opinion_span.start_idx),
-                                   self.get_index_after_encoding(triplet.opinion_span.end_idx+1)-1)
-            all_spans.append(aspect_span)
-            all_spans.append(opinion_span)
-        return all_spans
+            span: Tuple = (self.get_index_after_encoding(getattr(triplet, span_source).start_idx),
+                           self.get_index_after_encoding(getattr(triplet, span_source).end_idx + 1) - 1)
+            spans.append(span)
+        return spans
 
     def get_index_after_encoding(self, idx: int) -> int:
         return self.encoder.offset + idx + sum(self.sub_words_lengths[:idx])
@@ -81,11 +84,7 @@ class Triplet:
     def __init__(self, aspect_span: Span, opinion_span: Span, sentiment: str):
         self.aspect_span: Span = aspect_span
         self.opinion_span: Span = opinion_span
-        self._sentiment: str = sentiment
-
-    @property
-    def sentiment(self) -> int:
-        return SENTIMENT_MAPPER[self._sentiment]
+        self.sentiment: str = sentiment
 
     @classmethod
     def from_triplet_info(cls, triplet_info: Tuple, sentence: str) -> T:
@@ -99,7 +98,7 @@ class Triplet:
         return str({
             'aspect span': self.aspect_span,
             'opinion span': self.opinion_span,
-            'sentiment': self._sentiment
+            'sentiment': self.sentiment
         })
 
     def __repr__(self):

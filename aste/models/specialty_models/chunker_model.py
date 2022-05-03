@@ -3,7 +3,8 @@ from ASTE.utils import config
 from ASTE.dataset.reader import Batch
 from ASTE.dataset.domain.const import ChunkCode
 from ASTE.aste.losses import DiceLoss
-from ASTE.aste.tools.metrics import Metrics, selected_metrics
+from ASTE.aste.tools.metrics import Metrics, get_selected_metrics
+from ASTE.aste.models import ModelOutput
 
 import torch
 from typing import List
@@ -12,10 +13,10 @@ from typing import List
 class ChunkerModel(BaseModel):
     def __init__(self, model_name: str = 'Chunker Model'):
         super(ChunkerModel, self).__init__(model_name)
-        self.chunk_loss_ignore = DiceLoss(ignore_index=int(ChunkCode.NOT_RELEVANT),
+        self.chunk_loss_ignore = DiceLoss(ignore_index=ChunkCode.NOT_RELEVANT,
                                           alpha=config['model']['chunker']['dice-loss-alpha'])
         self.loss_lambda: float = config['model']['chunker']['lambda-factor']
-        self.metrics: Metrics = Metrics(name='Chunker', metrics=selected_metrics).to(config['general']['device'])
+        self.metrics: Metrics = Metrics(name='Chunker', metrics=get_selected_metrics()).to(config['general']['device'])
 
         self.dropout = torch.nn.Dropout(0.1)
         self.linear_layer_1 = torch.nn.Linear(config['encoder']['bert']['embedding-dimension'], 100)
@@ -32,7 +33,7 @@ class ChunkerModel(BaseModel):
         data = self.final_layer(data)
         return self.softmax(data)
 
-    def get_spans_from_batch_prediction(self, batch: Batch, predictions) -> List[torch.Tensor]:
+    def get_spans_from_batch_prediction(self, batch: Batch, predictions: torch.Tensor) -> List[torch.Tensor]:
         results: List[torch.Tensor] = list()
         predictions: torch.Tensor = torch.argmax(predictions, dim=-1)
 
@@ -59,7 +60,7 @@ class ChunkerModel(BaseModel):
         prediction = prediction[:sample.sentence_obj[0].encoded_sentence_length]
         sub_mask: torch.Tensor = sample.sub_words_mask[0][:sample.sentence_obj[0].encoded_sentence_length]
         # Prediction help - if a token consists of several sub-tokens, we certainly do not split in those sub-tokens
-        prediction = torch.where(sub_mask.bool(), prediction, int(ChunkCode.NOT_SPLIT))
+        prediction = torch.where(sub_mask.bool(), prediction, ChunkCode.NOT_SPLIT)
         max_token: int = len(prediction)
         prediction = torch.where(prediction)[0]
         # Start and end of spans are the same as start and end of sentence
@@ -77,14 +78,16 @@ class ChunkerModel(BaseModel):
     def _clean_chunker_output(batch: Batch, chunker_out: torch.Tensor) -> torch.Tensor:
         # Prediction help - if a token consists of several sub-tokens, we certainly do not split in those sub-tokens.
         fill_value: torch.Tensor = torch.zeros(chunker_out.shape[-1]).to(config['general']['device'])
-        fill_value[int(ChunkCode.NOT_SPLIT)] = 1.
+        fill_value[ChunkCode.NOT_SPLIT] = 1.
         sub_mask: torch.Tensor = batch.sub_words_mask.bool().view([-1, 1])
         return torch.where(sub_mask, chunker_out, fill_value)
 
-    def loss(self, batch: Batch, predictions) -> torch.Tensor:
+    def get_loss(self, model_out: ModelOutput) -> torch.Tensor:
+        predictions: torch.Tensor = model_out.chunker_output
         loss_ignore = self.chunk_loss_ignore(predictions.view([-1, predictions.shape[-1]]),
-                                             batch.chunk_label.view([-1]))
-        chunk_label: torch.Tensor = torch.where(batch.chunk_label != int(ChunkCode.NOT_RELEVANT), batch.chunk_label, 0)
+                                             model_out.batch.chunk_label.view([-1]))
+        chunk_label: torch.Tensor = torch.where(model_out.batch.chunk_label != ChunkCode.NOT_RELEVANT,
+                                                model_out.batch.chunk_label, 0)
         true_label_sum: torch.Tensor = torch.sum(chunk_label, dim=-1)
         pred_label_sum: torch.Tensor = torch.sum(predictions[..., 1], dim=-1)
         diff: torch.Tensor = torch.abs(pred_label_sum - true_label_sum).type(torch.float)

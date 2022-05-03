@@ -1,2 +1,2 @@
 from .sentence import Sentence
-from .label import Label
+from .chunk_label import get_label_from_sentence

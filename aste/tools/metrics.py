@@ -10,7 +10,7 @@ from ASTE.dataset.domain.const import ChunkCode
 
 
 class Metrics(MetricCollection):
-    def __init__(self, name: str, ignore_index: Optional[int] = int(ChunkCode.NOT_RELEVANT), *args, **kwargs):
+    def __init__(self, name: str, ignore_index: Optional[int] = ChunkCode.NOT_RELEVANT, *args, **kwargs):
         self.ignore_index = ignore_index
         self.name: str = name
         super().__init__(*args, **kwargs)
@@ -30,10 +30,11 @@ class Metrics(MetricCollection):
         return computed
 
 
-selected_metrics: List = [
-    Precision(num_classes=1, multiclass=False),
-    Recall(num_classes=1, multiclass=False),
-    Accuracy(num_classes=1, multiclass=False),
-    FBetaScore(num_classes=1, multiclass=False, beta=0.5),
-    F1Score(num_classes=1, multiclass=False)
-]
+def get_selected_metrics(num_classes: int = 1, multiclass: bool = False) -> List:
+    return [
+        Precision(num_classes=num_classes, multiclass=multiclass),
+        Recall(num_classes=num_classes, multiclass=multiclass),
+        Accuracy(num_classes=num_classes, multiclass=multiclass),
+        FBetaScore(num_classes=num_classes, multiclass=multiclass, beta=0.5),
+        F1Score(num_classes=num_classes, multiclass=multiclass)
+    ]
