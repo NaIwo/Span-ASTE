@@ -1,11 +1,12 @@
 import torch
 from torch import Tensor
-from typing import List, Dict, TypeVar
+from typing import List, Dict, TypeVar, Optional
 
 from ASTE.utils import config
 from ASTE.dataset.reader import Batch
 
-M = TypeVar('M', bound='ModelLoss')
+ML = TypeVar('ML', bound='ModelLoss')
+MM = TypeVar('MM', bound='ModelMetric')
 
 
 class ModelOutput:
@@ -40,6 +41,14 @@ class ModelLoss:
         if weighted:
             self._include_weights()
 
+    @classmethod
+    def from_instances(cls, *, chunker_loss: ML, triplet_loss: ML, weighted: bool = False) -> ML:
+        return cls(
+            chunker_loss=chunker_loss.chunker_loss,
+            triplet_loss=triplet_loss.triplet_loss,
+            weighted=weighted
+        )
+
     def _include_weights(self) -> None:
         self.chunker_loss *= config['model']['chunker']['loss-weight']
         self.triplet_loss *= config['model']['triplet-extractor']['loss-weight']
@@ -59,17 +68,17 @@ class ModelLoss:
             'full_loss': float(self.full_loss)
         }
 
-    def __radd__(self, other: M) -> M:
+    def __radd__(self, other: ML) -> ML:
         return self.__add__(other)
 
-    def __add__(self, other: M) -> M:
+    def __add__(self, other: ML) -> ML:
         return ModelLoss(
             chunker_loss=self.chunker_loss + other.chunker_loss,
             triplet_loss=self.triplet_loss + other.triplet_loss,
             weighted=False
         )
 
-    def __truediv__(self, other: int) -> M:
+    def __truediv__(self, other: int) -> ML:
         return ModelLoss(
             chunker_loss=self.chunker_loss / other,
             triplet_loss=self.triplet_loss / other,
@@ -94,13 +103,22 @@ class ModelLoss:
 class ModelMetric:
     NAME: str = 'Metrics'
 
-    def __init__(self, chunker_metric: Dict):
-        self.chunker_metric: Dict = chunker_metric
+    def __init__(self, *, chunker_metric: Optional[Dict] = None, triplet_metric: Optional[Dict] = None):
+        self.chunker_metric: Optional[Dict] = chunker_metric
+        self.triplet_metric: Optional[Dict] = triplet_metric
+
+    @classmethod
+    def from_instances(cls, *, chunker_metric: MM, triplet_metric: MM) -> MM:
+        return cls(
+            chunker_metric=chunker_metric.chunker_metric,
+            triplet_metric=triplet_metric.triplet_metric
+        )
 
     @property
     def _all_metrics(self) -> Dict:
         return {
-            'chunker_metrics': self.chunker_metric
+            'chunker_metrics': self.chunker_metric,
+            'triplet_metric': self.triplet_metric,
         }
 
     def __repr__(self) -> str:

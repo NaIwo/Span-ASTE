@@ -4,19 +4,23 @@ from ASTE.dataset.reader import Batch
 from ASTE.dataset.domain.const import ASTELabels
 from ASTE.aste.losses import DiceLoss
 from ASTE.aste.tools.metrics import Metrics, get_selected_metrics
-from ASTE.aste.models import ModelOutput
+from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric
 
 import torch
 from functools import lru_cache
-from typing import Tuple
+from typing import Tuple, List
 
 
 class TripletExtractorModel(BaseModel):
-    def __init__(self, embeddings_dim: int, model_name: str = 'Pair Extractor Model'):
+    def __init__(self, embeddings_dim: int, model_name: str = 'Triplet Extractor Model'):
         super(TripletExtractorModel, self).__init__(model_name=model_name)
         self.triplet_loss = DiceLoss(ignore_index=ASTELabels.NOT_RELEVANT,
                                      alpha=config['model']['triplet-extractor']['dice-loss-alpha'])
-        self.metrics: Metrics = Metrics(name='Pair Extractor', metrics=get_selected_metrics()).to(
+
+        self.independent_metrics: Metrics = Metrics(name='Independent matrix predictions',
+                                                    metrics=get_selected_metrics(num_classes=6, multiclass=True)).to(
+            config['general']['device'])
+        self.final_metrics: Metrics = Metrics(name='Final predictions', metrics=get_selected_metrics()).to(
             config['general']['device'])
 
         input_dimension: int = embeddings_dim * 2
@@ -45,15 +49,22 @@ class TripletExtractorModel(BaseModel):
         data_row: torch.Tensor = data.unsqueeze(2).expand(-1, -1, max_len, -1)
         return torch.cat([data_col, data_row], dim=-1)
 
-    def get_loss(self, model_out: ModelOutput) -> torch.Tensor:
+    def get_loss(self, model_out: ModelOutput) -> ModelLoss:
         true_labels: torch.Tensor = self.construct_matrix_labels(model_out.batch, tuple(model_out.predicted_spans))
-        return self.triplet_loss(
+        return ModelLoss(triplet_loss=self.triplet_loss(
             model_out.triplet_results.view([-1, model_out.triplet_results.shape[-1]]),
             true_labels.view([-1])
-        )
+        ))
+
+    def update_metrics(self, model_out: ModelOutput) -> None:
+        true_labels: torch.Tensor = self.construct_matrix_labels(model_out.batch, tuple(model_out.predicted_spans))
+        self.independent_metrics(model_out.triplet_results.view([-1, model_out.triplet_results.shape[-1]]),
+                                 true_labels.view([-1])
+                                 )
+        self._get_triplets_from_matrix(true_labels)
 
     @staticmethod
-    @lru_cache(maxsize=2048)
+    @lru_cache(maxsize=None)
     def construct_matrix_labels(batch: Batch, predicted_spans: Tuple[torch.Tensor]) -> torch.Tensor:
         labels_matrix: torch.Tensor = TripletExtractorModel._get_unfilled_labels_matrix(predicted_spans)
 
@@ -68,7 +79,7 @@ class TripletExtractorModel(BaseModel):
     @staticmethod
     def _fill_one_dim_matrix(sample: Batch, labels_matrix: torch.Tensor, predicted_spans: torch.Tensor) -> None:
 
-        # TODO make it more readable
+        # TODO make it more readable and add docs
         def check_for_second_element_and_fill_if_necessary(sec_pair: str) -> None:
             assert sec_pair in ('aspect', 'opinion'), f'Invalid second pair source: {sec_pair}!'
             # we can do that in this way because we do not interfere with order of spans
@@ -108,3 +119,40 @@ class TripletExtractorModel(BaseModel):
         labels_matrix: torch.Tensor = torch.full(size=size, fill_value=ASTELabels.NOT_PAIR).to(
             config['general']['device'])
         return labels_matrix
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def _get_triplets_from_matrix(matrix: torch.Tensor) -> torch.Tensor:
+        triplets: List = list()
+
+        sample_idx: int
+        sample: torch.Tensor
+        for sample_idx, sample in enumerate(matrix):
+            triplets += TripletExtractorModel._get_triplets_from_sample(sample, sample_idx)
+        return torch.tensor(triplets).to(config['general']['device'])
+
+    @staticmethod
+    def _get_triplets_from_sample(sample: torch.Tensor, sample_idx: int = 0) -> List:
+        triplets: List = list()
+        diag: torch.Tensor = torch.diagonal(sample, 0)
+        diag_idx: int
+        diag_el: int
+        for diag_idx, diag_el in enumerate(diag):
+            if diag_el not in (ASTELabels.ASPECT, ASTELabels.OPINION):
+                continue
+            for col_idx in range(0, diag_idx):
+                if diag[col_idx] not in (ASTELabels.ASPECT, ASTELabels.OPINION):
+                    continue
+                relation: int = int(sample[col_idx, diag_idx])
+                triplets.append([sample_idx, diag_idx, col_idx, relation])
+        return triplets
+
+    def get_metrics(self) -> ModelMetric:
+        return ModelMetric(triplet_metric={
+            self.independent_metrics.name.replace(' ', '_'): self.independent_metrics.compute(),
+            self.final_metrics.name.replace(' ', '_'): self.final_metrics.compute()
+        })
+
+    def reset_metrics(self) -> None:
+        self.independent_metrics.reset()
+        self.final_metrics.reset()

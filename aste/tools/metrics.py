@@ -1,7 +1,5 @@
-import logging
 from typing import Optional, Dict, List
 
-import torch
 from torchmetrics import MetricCollection
 from torchmetrics import FBetaScore, Accuracy, Precision, Recall, F1Score
 
@@ -20,13 +18,9 @@ class Metrics(MetricCollection):
         super(Metrics, self).forward(preds, target)
 
     def compute(self):
-        logging.info(f'Metrics: ')
-        logging.info(f'\t--- {self.name} ---')
-        metric_name: str
-        score: torch.Tensor
         computed: Dict = super(Metrics, self).compute()
         for metric_name, score in computed.items():
-            logging.info(f'\t->\t{metric_name}: {score.item()}')
+            computed[metric_name] = float(score)
         return computed
 
 

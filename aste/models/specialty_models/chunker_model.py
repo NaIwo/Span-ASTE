@@ -4,7 +4,7 @@ from ASTE.dataset.reader import Batch
 from ASTE.dataset.domain.const import ChunkCode
 from ASTE.aste.losses import DiceLoss
 from ASTE.aste.tools.metrics import Metrics, get_selected_metrics
-from ASTE.aste.models import ModelOutput
+from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric
 
 import torch
 from typing import List
@@ -68,21 +68,7 @@ class ChunkerModel(BaseModel):
         prediction = torch.nn.functional.pad(prediction, [0, 1], mode='constant', value=max_token - offset)
         return prediction
 
-    def update_metrics(self, batch: Batch, chunker_out: torch.Tensor) -> Metrics:
-        return self.metrics(
-            self._clean_chunker_output(batch, chunker_out.view([-1, chunker_out.shape[-1]])),
-            batch.chunk_label.view([-1])
-        )
-
-    @staticmethod
-    def _clean_chunker_output(batch: Batch, chunker_out: torch.Tensor) -> torch.Tensor:
-        # Prediction help - if a token consists of several sub-tokens, we certainly do not split in those sub-tokens.
-        fill_value: torch.Tensor = torch.zeros(chunker_out.shape[-1]).to(config['general']['device'])
-        fill_value[ChunkCode.NOT_SPLIT] = 1.
-        sub_mask: torch.Tensor = batch.sub_words_mask.bool().view([-1, 1])
-        return torch.where(sub_mask, chunker_out, fill_value)
-
-    def get_loss(self, model_out: ModelOutput) -> torch.Tensor:
+    def get_loss(self, model_out: ModelOutput) -> ModelLoss:
         predictions: torch.Tensor = model_out.chunker_output
         loss_ignore = self.chunk_loss_ignore(predictions.view([-1, predictions.shape[-1]]),
                                              model_out.batch.chunk_label.view([-1]))
@@ -91,4 +77,25 @@ class ChunkerModel(BaseModel):
         true_label_sum: torch.Tensor = torch.sum(chunk_label, dim=-1)
         pred_label_sum: torch.Tensor = torch.sum(predictions[..., 1], dim=-1)
         diff: torch.Tensor = torch.abs(pred_label_sum - true_label_sum).type(torch.float)
-        return loss_ignore + self.loss_lambda * torch.mean(diff)
+        return ModelLoss(chunker_loss=loss_ignore + self.loss_lambda * torch.mean(diff))
+
+    def update_metrics(self, model_out: ModelOutput) -> None:
+        self.metrics(
+            self._clean_chunker_output(model_out.batch,
+                                       model_out.chunker_output.view([-1, model_out.chunker_output.shape[-1]])),
+            model_out.batch.chunk_label.view([-1])
+        )
+
+    def get_metrics(self) -> ModelMetric:
+        return ModelMetric(chunker_metric=self.metrics.compute())
+
+    def reset_metrics(self) -> None:
+        self.metrics.reset()
+
+    @staticmethod
+    def _clean_chunker_output(batch: Batch, chunker_out: torch.Tensor) -> torch.Tensor:
+        # Prediction help - if a token consists of several sub-tokens, we certainly do not split in those sub-tokens.
+        fill_value: torch.Tensor = torch.zeros(chunker_out.shape[-1]).to(config['general']['device'])
+        fill_value[ChunkCode.NOT_SPLIT] = 1.
+        sub_mask: torch.Tensor = batch.sub_words_mask.bool().view([-1, 1])
+        return torch.where(sub_mask, chunker_out, fill_value)

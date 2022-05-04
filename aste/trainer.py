@@ -5,11 +5,12 @@ from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
 
 import torch
 from torch.utils.data import DataLoader
-from typing import Optional, Dict, List, Tuple, Union, Set
+from typing import Optional, Dict, Union
 import logging
 from datetime import datetime
 from tqdm import tqdm
 import os
+import yaml
 
 
 class Trainer:
@@ -24,18 +25,12 @@ class Trainer:
 
         self.save_path: str = self._get_save_path(save_path)
 
-        self._add_tracker_configs()
-
     def _get_save_path(self, save_path: Optional[str]) -> str:
         if save_path is None:
             return os.path.join(os.getcwd(), 'results', datetime.now().strftime("%Y%m%d-%H%M%S"),
                                 f'{self.model.model_name.replace(" ", "_").lower()}.pth')
         else:
             return save_path
-
-    def _add_tracker_configs(self) -> None:
-        self.tracker.add_config({'Chunk Loss': {'alpha': config['model']['chunker']['dice-loss-alpha'],
-                                                'lambda factor': config['model']['chunker']['lambda-factor']}})
 
     def train(self, train_data: DataLoader, dev_data: Optional[DataLoader] = None) -> None:
         logging.info(f"Tracker '{self.tracker.name}' has been initialized.")
@@ -99,18 +94,25 @@ class Trainer:
             batch_idx: int
             batch: Batch
             for batch_idx, batch in enumerate(bar := tqdm(test_data)):
-                model_out: ModelOutput = self.model(batch, compute_metrics=True)
+                model_out: ModelOutput = self.model(batch)
+                self.model.update_metrics(model_out)
                 loss: ModelLoss = self.model.get_loss(model_out)
                 test_loss += loss
                 bar.set_description(f'Test Loss: {test_loss / (batch_idx + 1)}')
             logging.info(f'Test loss: {test_loss / len(test_data)}')
             metrics: ModelMetric = self.model.get_metrics_and_reset()
+        self.pprint_metrics(metrics)
         test_loss = test_loss / len(test_data)
         return {
             ModelOutput.NAME: model_out,
             ModelLoss.NAME: test_loss,
             ModelMetric.NAME: metrics
         }
+
+    @staticmethod
+    def pprint_metrics(metrics: ModelMetric) -> None:
+        logging.info(f'\n{ModelMetric.NAME}\n'
+                     f'{yaml.dump(metrics.__dict__, sort_keys=False, default_flow_style=False)}')
 
     def check_coverage_detected_spans(self, data: DataLoader) -> Dict:
         num_predicted: int = 0
