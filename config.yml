@@ -2,7 +2,7 @@ general:
   device: cuda # {cpu, cuda}
   logging-level: INFO
 dataset:
-  batch-size: 8
+  batch-size: 4
 model:
   epochs: 100
   learning-rate: 0.00001
@@ -16,8 +16,10 @@ model:
   chunker:
     dice-loss-alpha: 0.0
     lambda-factor: 0.001
-  pair-extractor:
+    loss-weight: 2.0
+  triplet-extractor:
     dice-loss-alpha: 0.5
+    loss-weight: 1.0
 encoder:
   bert:
     source: bert-base-uncased

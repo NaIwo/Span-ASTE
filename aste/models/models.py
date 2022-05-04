@@ -38,7 +38,6 @@ class BertBaseModel(BaseModel):
 
         aggregated_embeddings: torch.Tensor = self.aggregator.aggregate(embeddings, predicted_spans)
         triplet_results: torch.Tensor = self.triplets_extractor(aggregated_embeddings)
-        self.pairs_extractor.construct_matrix_labels(batch, tuple(predicted_spans))
 
         if compute_metrics:
             self.chunker.update_metrics(batch, chunker_output)
@@ -49,7 +48,8 @@ class BertBaseModel(BaseModel):
                            triplet_results=triplet_results)
 
     def get_loss(self, model_out: ModelOutput) -> ModelLoss:
-        return ModelLoss(chunker_loss=self.chunker.get_loss(model_out))
+        return ModelLoss(chunker_loss=self.chunker.get_loss(model_out),
+                         triplet_loss=self.triplets_extractor.get_loss(model_out))
 
     def get_metrics_and_reset(self) -> ModelMetric:
         metrics: ModelMetric = self.get_metrics()

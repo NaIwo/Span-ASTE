@@ -2,6 +2,7 @@ import torch
 from torch import Tensor
 from typing import List, Dict, TypeVar
 
+from ASTE.utils import config
 from ASTE.dataset.reader import Batch
 
 M = TypeVar('M', bound='ModelLoss')
@@ -16,6 +17,9 @@ class ModelOutput:
         self.predicted_spans: List[Tensor] = predicted_spans
         self.triplet_results: Tensor = triplet_results
 
+    def __repr__(self) -> str:
+        return self.__str__()
+
     def __str__(self):
         return str({
             'batch': [sample.sentence_obj[0].sentence for sample in self.batch],
@@ -29,39 +33,55 @@ class ModelOutput:
 class ModelLoss:
     NAME: str = 'Losses'
 
-    def __init__(self, *, chunker_loss: Tensor = torch.tensor([0.])):
+    def __init__(self, *, chunker_loss: Tensor = 0., triplet_loss: Tensor = 0., weighted: bool = True):
         self.chunker_loss: Tensor = chunker_loss
+        self.triplet_loss: Tensor = triplet_loss
+
+        if weighted:
+            self._include_weights()
+
+    def _include_weights(self) -> None:
+        self.chunker_loss *= config['model']['chunker']['loss-weight']
+        self.triplet_loss *= config['model']['triplet-extractor']['loss-weight']
 
     def backward(self) -> None:
         self.full_loss.backward()
 
     @property
     def full_loss(self) -> Tensor:
-        return self.chunker_loss
+        return self.chunker_loss + self.triplet_loss
 
     @property
     def _loss_dict(self) -> Dict:
         return {
             'chunker_loss': float(self.chunker_loss),
+            'triplet_loss': float(self.triplet_loss),
             'full_loss': float(self.full_loss)
         }
 
-    def __radd__(self, other) -> Tensor:
+    def __radd__(self, other: M) -> M:
         return self.__add__(other)
 
     def __add__(self, other: M) -> M:
         return ModelLoss(
-            chunker_loss=self.chunker_loss + other.chunker_loss
+            chunker_loss=self.chunker_loss + other.chunker_loss,
+            triplet_loss=self.triplet_loss + other.triplet_loss,
+            weighted=False
         )
 
     def __truediv__(self, other: int) -> M:
         return ModelLoss(
-            chunker_loss=self.chunker_loss / other
+            chunker_loss=self.chunker_loss / other,
+            triplet_loss=self.triplet_loss / other,
+            weighted=False
         )
 
     def __iter__(self):
         for element in self._loss_dict.items():
             yield element
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
     def __str__(self):
         return str({name: round(value, 4) for name, value in self._loss_dict.items()})
@@ -82,6 +102,9 @@ class ModelMetric:
         return {
             'chunker_metrics': self.chunker_metric
         }
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
     def __str__(self):
         return str(self._all_metrics)

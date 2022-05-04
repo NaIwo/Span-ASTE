@@ -14,8 +14,8 @@ from typing import Tuple
 class TripletExtractorModel(BaseModel):
     def __init__(self, embeddings_dim: int, model_name: str = 'Pair Extractor Model'):
         super(TripletExtractorModel, self).__init__(model_name=model_name)
-        self.pair_extractor_loss = DiceLoss(ignore_index=ASTELabels.NOT_RELEVANT,
-                                            alpha=config['model']['pair-extractor']['dice-loss-alpha'])
+        self.triplet_loss = DiceLoss(ignore_index=ASTELabels.NOT_RELEVANT,
+                                     alpha=config['model']['triplet-extractor']['dice-loss-alpha'])
         self.metrics: Metrics = Metrics(name='Pair Extractor', metrics=get_selected_metrics()).to(
             config['general']['device'])
 
@@ -47,8 +47,10 @@ class TripletExtractorModel(BaseModel):
 
     def get_loss(self, model_out: ModelOutput) -> torch.Tensor:
         true_labels: torch.Tensor = self.construct_matrix_labels(model_out.batch, tuple(model_out.predicted_spans))
-        pass
-
+        return self.triplet_loss(
+            model_out.triplet_results.view([-1, model_out.triplet_results.shape[-1]]),
+            true_labels.view([-1])
+        )
 
     @staticmethod
     @lru_cache(maxsize=2048)
@@ -58,7 +60,8 @@ class TripletExtractorModel(BaseModel):
         sample_idx: int
         sample: Batch
         for sample_idx, sample in enumerate(batch):
-            TripletExtractorModel._fill_one_dim_matrix(sample, labels_matrix[sample_idx, ...], predicted_spans[sample_idx])
+            TripletExtractorModel._fill_one_dim_matrix(sample, labels_matrix[sample_idx, ...],
+                                                       predicted_spans[sample_idx])
 
         return labels_matrix
 
@@ -102,5 +105,6 @@ class TripletExtractorModel(BaseModel):
     def _get_unfilled_labels_matrix(predicted_spans: Tuple[torch.Tensor]) -> torch.Tensor:
         max_span_num = max([spans.shape[0] for spans in predicted_spans])
         size: Tuple = (len(predicted_spans), max_span_num, max_span_num)
-        labels_matrix: torch.Tensor = torch.full(size=size, fill_value=ASTELabels.NOT_PAIR)
+        labels_matrix: torch.Tensor = torch.full(size=size, fill_value=ASTELabels.NOT_PAIR).to(
+            config['general']['device'])
         return labels_matrix
