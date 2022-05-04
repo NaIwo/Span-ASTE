@@ -3,7 +3,7 @@ from ASTE.utils import config
 from ASTE.dataset.reader import Batch
 from ASTE.dataset.domain.const import ChunkCode
 from ASTE.aste.losses import DiceLoss
-from ASTE.aste.tools.metrics import Metrics, get_selected_metrics
+from ASTE.aste.tools.metrics import Metric, get_selected_metrics
 from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric
 
 import torch
@@ -16,7 +16,8 @@ class ChunkerModel(BaseModel):
         self.chunk_loss_ignore = DiceLoss(ignore_index=ChunkCode.NOT_RELEVANT,
                                           alpha=config['model']['chunker']['dice-loss-alpha'])
         self.loss_lambda: float = config['model']['chunker']['lambda-factor']
-        self.metrics: Metrics = Metrics(name='Chunker', metrics=get_selected_metrics()).to(config['general']['device'])
+        self.metrics: Metric = Metric(name='Chunker', metrics=get_selected_metrics(multiclass=False),
+                                      ignore_index=ChunkCode.NOT_RELEVANT).to(config['general']['device'])
 
         self.dropout = torch.nn.Dropout(0.1)
         self.linear_layer_1 = torch.nn.Linear(config['encoder']['bert']['embedding-dimension'], 100)

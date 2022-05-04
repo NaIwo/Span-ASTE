@@ -3,7 +3,7 @@ from ASTE.utils import config
 from ASTE.dataset.reader import Batch
 from ASTE.dataset.domain.const import ASTELabels
 from ASTE.aste.losses import DiceLoss
-from ASTE.aste.tools.metrics import Metrics, get_selected_metrics
+from ASTE.aste.tools.metrics import Metric, get_selected_metrics
 from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric
 
 import torch
@@ -17,11 +17,12 @@ class TripletExtractorModel(BaseModel):
         self.triplet_loss = DiceLoss(ignore_index=ASTELabels.NOT_RELEVANT,
                                      alpha=config['model']['triplet-extractor']['dice-loss-alpha'])
 
-        self.independent_metrics: Metrics = Metrics(name='Independent matrix predictions',
-                                                    metrics=get_selected_metrics(num_classes=6, multiclass=True)).to(
-            config['general']['device'])
-        self.final_metrics: Metrics = Metrics(name='Final predictions', metrics=get_selected_metrics()).to(
-            config['general']['device'])
+        metrics: List = get_selected_metrics(num_classes=6)
+        self.independent_metrics: Metric = Metric(name='Independent matrix predictions', metrics=metrics,
+                                                  ignore_index=ASTELabels.NOT_RELEVANT).to(config['general']['device'])
+
+        metrics = get_selected_metrics(for_triplets=True)
+        self.final_metrics: Metric = Metric(name='Final predictions', metrics=metrics).to(config['general']['device'])
 
         input_dimension: int = embeddings_dim * 2
         self.linear_layer1 = torch.nn.Linear(input_dimension, input_dimension // 2)
@@ -61,7 +62,12 @@ class TripletExtractorModel(BaseModel):
         self.independent_metrics(model_out.triplet_results.view([-1, model_out.triplet_results.shape[-1]]),
                                  true_labels.view([-1])
                                  )
-        self._get_triplets_from_matrix(true_labels)
+
+        true_triplets: torch.Tensor = self._get_triplets_from_matrix(true_labels)
+        predicted_labels: torch.Tensor = torch.argmax(model_out.triplet_results, dim=-1)
+        predicted_labels = torch.where(true_labels == -1, true_labels, predicted_labels)
+        predicted_triplets: torch.Tensor = self._get_triplets_from_matrix(predicted_labels)
+        self.final_metrics(predicted_triplets, true_triplets)
 
     @staticmethod
     @lru_cache(maxsize=None)
@@ -148,10 +154,8 @@ class TripletExtractorModel(BaseModel):
         return triplets
 
     def get_metrics(self) -> ModelMetric:
-        return ModelMetric(triplet_metric={
-            self.independent_metrics.name.replace(' ', '_'): self.independent_metrics.compute(),
-            self.final_metrics.name.replace(' ', '_'): self.final_metrics.compute()
-        })
+        return ModelMetric(triplet_metric=self.final_metrics.compute(),
+                           independent_matrix_metric=self.independent_metrics.compute())
 
     def reset_metrics(self) -> None:
         self.independent_metrics.reset()

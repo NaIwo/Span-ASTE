@@ -7,7 +7,7 @@ model:
   epochs: 100
   learning-rate: 0.00001
   early-stopping: 10 # num of epochs without improvement
-  best-epoch-objective: recall # you can choose: loss and all of metrics
+  best-epoch-objective: TripletF1 # you can choose: loss and all of metrics
   bert:
     source: bert-base-uncased
   aggregators:
@@ -16,9 +16,9 @@ model:
   chunker:
     dice-loss-alpha: 0.0
     lambda-factor: 0.001
-    loss-weight: 2.0
+    loss-weight: 1.0
   triplet-extractor:
-    dice-loss-alpha: 0.5
+    dice-loss-alpha: 0.9
     loss-weight: 1.0
 encoder:
   bert:

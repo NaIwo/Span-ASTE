@@ -103,14 +103,17 @@ class ModelLoss:
 class ModelMetric:
     NAME: str = 'Metrics'
 
-    def __init__(self, *, chunker_metric: Optional[Dict] = None, triplet_metric: Optional[Dict] = None):
+    def __init__(self, *, chunker_metric: Optional[Dict] = None, triplet_metric: Optional[Dict] = None,
+                 independent_matrix_metric: Optional[Dict] = None):
         self.chunker_metric: Optional[Dict] = chunker_metric
         self.triplet_metric: Optional[Dict] = triplet_metric
+        self.independent_matrix_metric: Optional[Dict] = independent_matrix_metric
 
     @classmethod
     def from_instances(cls, *, chunker_metric: MM, triplet_metric: MM) -> MM:
         return cls(
             chunker_metric=chunker_metric.chunker_metric,
+            independent_matrix_metric=triplet_metric.independent_matrix_metric,
             triplet_metric=triplet_metric.triplet_metric
         )
 
@@ -119,6 +122,7 @@ class ModelMetric:
         return {
             'chunker_metrics': self.chunker_metric,
             'triplet_metric': self.triplet_metric,
+            'independent_matrix_metric': self.independent_matrix_metric,
         }
 
     def __repr__(self) -> str:

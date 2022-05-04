@@ -16,8 +16,8 @@ class Memory:
         self.patience: Optional[int] = config['model']['early-stopping']
         self.early_stopping_objective: Optional[str] = None
         if self.patience is not None:
-            self.early_stopping_objective = config['model']['best-epoch-objective'].capitalize()
-            if 'Loss' in self.early_stopping_objective:
+            self.early_stopping_objective = config['model']['best-epoch-objective']
+            if 'Loss' in self.early_stopping_objective.capitalize():
                 self.early_stopping_objective = 'Test loss'
 
     def update(self, epoch: int, values_dict: Dict) -> bool:

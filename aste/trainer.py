@@ -74,7 +74,7 @@ class Trainer:
         if dev_data is not None:
             values_dict: Dict = dict()
             eval_out: Dict[str, Union[ModelOutput, ModelLoss, ModelMetric]] = self.test(dev_data)
-            values_dict.update(eval_out[ModelMetric.NAME].chunker_metric)
+            values_dict.update(eval_out[ModelMetric.NAME].triplet_metric)
             values_dict['Test loss'] = eval_out[ModelLoss.NAME].full_loss
             self.tracker.log({'Test Loss': eval_out[ModelLoss.NAME].logs,
                               'Metrics': eval_out[ModelMetric.NAME].logs})
