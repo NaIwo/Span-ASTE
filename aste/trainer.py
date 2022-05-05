@@ -40,10 +40,13 @@ class Trainer:
         os.makedirs(self.save_path[:self.save_path.rfind(os.sep)], exist_ok=False)
         training_start_time: datetime.time = datetime.now()
         logging.info(f'Training start at time: {training_start_time}')
-        for epoch in range(config['model']['epochs']):
+        for epoch in range(config['model']['total-epochs']):
+            self.model.update_trainable_parameters()
+            if not self.model.fully_trainable:
+                self.memory.reset()
             epoch_loss: ModelLoss = self._training_epoch(train_data)
             self.tracker.log({'Train Loss': epoch_loss.logs})
-            logging.info(f"Epoch: {epoch + 1}/{config['model']['epochs']}. Epoch loss: {epoch_loss}")
+            logging.info(f"Epoch: {epoch + 1}/{config['model']['total-epochs']}. Epoch loss: {epoch_loss}")
             early_stopping: bool = self._eval(epoch=epoch, dev_data=dev_data)
             if early_stopping:
                 logging.info(f'Early stopping performed. Patience factor: {self.memory.patience}')

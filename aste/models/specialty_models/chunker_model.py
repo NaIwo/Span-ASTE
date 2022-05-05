@@ -73,12 +73,15 @@ class ChunkerModel(BaseModel):
         predictions: torch.Tensor = model_out.chunker_output
         loss_ignore = self.chunk_loss_ignore(predictions.view([-1, predictions.shape[-1]]),
                                              model_out.batch.chunk_label.view([-1]))
+        normalizer: torch.Tensor = torch.where(model_out.batch.chunk_label != ChunkCode.NOT_RELEVANT)[0].numel()
         chunk_label: torch.Tensor = torch.where(model_out.batch.chunk_label != ChunkCode.NOT_RELEVANT,
                                                 model_out.batch.chunk_label, 0)
         true_label_sum: torch.Tensor = torch.sum(chunk_label, dim=-1)
         pred_label_sum: torch.Tensor = torch.sum(predictions[..., 1], dim=-1)
         diff: torch.Tensor = torch.abs(pred_label_sum - true_label_sum).type(torch.float)
-        return ModelLoss(chunker_loss=loss_ignore + self.loss_lambda * torch.mean(diff))
+        diff_normalizer: torch.Tensor = torch.sum(pred_label_sum)
+        return ModelLoss(
+            chunker_loss=loss_ignore + self.loss_lambda * torch.mean(diff))
 
     def update_metrics(self, model_out: ModelOutput) -> None:
         self.metrics(

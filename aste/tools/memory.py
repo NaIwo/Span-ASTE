@@ -20,6 +20,9 @@ class Memory:
             if 'Loss' in self.early_stopping_objective.capitalize():
                 self.early_stopping_objective = 'Test loss'
 
+    def reset(self):
+        self.__init__()
+
     def update(self, epoch: int, values_dict: Dict) -> bool:
         value: float = values_dict[self.early_stopping_objective]
         improvement: bool = False

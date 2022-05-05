@@ -4,7 +4,7 @@ general:
 dataset:
   batch-size: 4
 model:
-  epochs: 100
+  total-epochs: 100
   learning-rate: 0.00001
   early-stopping: 10 # num of epochs without improvement
   best-epoch-objective: TripletF1 # you can choose: loss and all of metrics
@@ -14,12 +14,14 @@ model:
     endpoint:
       distance-embedding-dim: 3
   chunker:
-    dice-loss-alpha: 0.0
+    dice-loss-alpha: 0.1
     lambda-factor: 0.001
     loss-weight: 1.0
+    single-model-epochs: 12
   triplet-extractor:
     dice-loss-alpha: 0.9
     loss-weight: 1.0
+    single-model-epochs: 7
 encoder:
   bert:
     source: bert-base-uncased
