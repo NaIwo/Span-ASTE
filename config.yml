@@ -2,7 +2,8 @@ general:
   device: cuda # {cpu, cuda}
   logging-level: INFO
 dataset:
-  batch-size: 4
+  batch-size: 1
+  effective-batch-size: 4 # gradient accumulation (after (batch-size * effective-batch-size) samples the gradient will be computed)
 model:
   total-epochs: 100
   learning-rate: 0.00001
@@ -14,14 +15,15 @@ model:
     endpoint:
       distance-embedding-dim: 3
   chunker:
-    dice-loss-alpha: 0.1
+    dice-loss-alpha: 0.0
     lambda-factor: 0.001
     loss-weight: 1.0
-    single-model-epochs: 12
-  triplet-extractor:
-    dice-loss-alpha: 0.9
+  selector:
+    dice-loss-alpha: 0.3
     loss-weight: 1.0
-    single-model-epochs: 7
+  triplet-extractor:
+    dice-loss-alpha: 0.5
+    loss-weight: 1.0
 encoder:
   bert:
     source: bert-base-uncased

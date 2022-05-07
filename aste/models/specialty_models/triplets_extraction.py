@@ -13,10 +13,10 @@ from typing import Tuple, List, Dict
 
 
 class TripletExtractorModel(BaseModel):
-    def __init__(self, embeddings_dim: int, model_name: str = 'Triplet Extractor Model'):
+    def __init__(self, input_dim: int, model_name: str = 'Triplet Extractor Model'):
         super(TripletExtractorModel, self).__init__(model_name=model_name)
-        self.triplet_loss = CrossEntropyLoss(ignore_index=ASTELabels.NOT_RELEVANT)
-                                     # alpha=config['model']['triplet-extractor']['dice-loss-alpha'])
+        self.triplet_loss = DiceLoss(ignore_index=ASTELabels.NOT_RELEVANT,
+                                     alpha=config['model']['triplet-extractor']['dice-loss-alpha'])
 
         metrics: List = get_selected_metrics(num_classes=6)
         self.independent_metrics: Metric = Metric(name='Independent matrix predictions', metrics=metrics,
@@ -25,7 +25,7 @@ class TripletExtractorModel(BaseModel):
         metrics = get_selected_metrics(for_triplets=True)
         self.final_metrics: Metric = Metric(name='Final predictions', metrics=metrics).to(config['general']['device'])
 
-        input_dimension: int = embeddings_dim * 2
+        input_dimension: int = input_dim * 2
         self.linear_layer1 = torch.nn.Linear(input_dimension, 300)
         self.linear_layer2 = torch.nn.Linear(300, 100)
         # self.linear_layer3 = torch.nn.Linear(input_dimension // 4, input_dimension // 8)

@@ -39,8 +39,8 @@ class TripletMetric(TorchMetric):
         target = target.unique(dim=0)
 
         self.correct += self._count_correct_num(preds, target)
-        self.total_predicted += preds.numel()
-        self.total_target += target.numel()
+        self.total_predicted += preds.shape[0]
+        self.total_target += target.shape[0]
 
     @staticmethod
     def _count_correct_num(preds: Tensor, target: Tensor) -> int:
@@ -51,15 +51,17 @@ class TripletMetric(TorchMetric):
     def compute(self) -> float:
         raise NotImplemented
 
+    @staticmethod
+    def safe_div(dividend: float, divider: float) -> float:
+        return dividend / divider if divider != 0. else 0.
+
 
 class TripletPrecision(TripletMetric):
     def __init__(self, dist_sync_on_step=False):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
 
     def compute(self) -> float:
-        if self.total_predicted == 0:
-            return 0.
-        return self.correct.float() / self.total_predicted
+        return self.safe_div(self.correct, self.total_predicted)
 
 
 class TripletRecall(TripletMetric):
@@ -67,9 +69,7 @@ class TripletRecall(TripletMetric):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
 
     def compute(self) -> float:
-        if self.total_target == 0:
-            return 0.
-        return self.correct.float() / self.total_target
+        return self.safe_div(self.correct, self.total_target)
 
 
 class TripletF1(TripletMetric):
@@ -77,13 +77,10 @@ class TripletF1(TripletMetric):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
 
     def compute(self) -> float:
-        if self.total_predicted == 0 or self.total_target == 0:
-            return 0.
+        precision: float = self.safe_div(self.correct, self.total_predicted)
+        recall: float = self.safe_div(self.correct, self.total_target)
 
-        precision: float = self.correct.float() / self.total_predicted
-        recall: float = self.correct.float() / self.total_target
-
-        return 2 * (precision * recall) / (precision + recall)
+        return self.safe_div(2 * (precision * recall), (precision + recall))
 
 
 def get_selected_metrics(num_classes: int = 1, multiclass: Optional[bool] = None, for_triplets: bool = False) -> List:

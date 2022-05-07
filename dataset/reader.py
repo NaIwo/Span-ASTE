@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 from typing import List, Dict
 import os
+from collections import Iterable
 
 
 class ASTEDataset(Dataset):
@@ -67,16 +68,26 @@ class DatasetLoader:
         opinion_spans_batch = pad_sequence(opinion_spans, padding_value=-1, batch_first=True)
         chunk_batch = pad_sequence(chunk_labels, padding_value=ChunkCode.NOT_RELEVANT, batch_first=True)
         sub_words_masks_batch = pad_sequence(sub_words_masks, padding_value=0, batch_first=True)
-        mask = self._construct_mask(lengths)
-        idx = torch.argsort(lengths, descending=True)
+        mask: torch.Tensor = self._construct_mask(lengths)
+        idx: torch.Tensor = torch.argsort(lengths, descending=True)
 
-        return Batch(sentence_obj=list(np.array(sentence_objs)[idx]),
+        sentence_obj = self._get_list_of_sentence_objs(sentence_objs, idx)
+        return Batch(sentence_obj=sentence_obj,
                      sentence=sentence_batch[idx].to(config['general']['device']),
                      aspect_spans=aspect_spans_batch[idx].to(config['general']['device']),
                      opinion_spans=opinion_spans_batch[idx].to(config['general']['device']),
                      chunk_label=chunk_batch[idx].to(config['general']['device']),
                      sub_words_masks=sub_words_masks_batch[idx].to(config['general']['device']),
                      mask=mask[idx].to(config['general']['device']))
+
+    @staticmethod
+    def _get_list_of_sentence_objs(sentence_objs: List[Sentence], idx: torch.Tensor) -> List[Sentence]:
+        sentence_obj = np.array(sentence_objs)[idx]
+        if not isinstance(sentence_obj, Iterable):
+            sentence_obj = [sentence_obj]
+        else:
+            sentence_obj = list(sentence_obj)
+        return sentence_obj
 
     @staticmethod
     def _construct_mask(lengths: torch.Tensor) -> torch.Tensor:

@@ -7,14 +7,18 @@ from ASTE.utils import config
 
 
 class EndPointAggregator(BaseAggregator, Module):
-    def __init__(self, name: str = 'End Point Aggregator'):
+    def __init__(self, input_dim: int, name: str = 'End Point Aggregator', *args, **kwargs):
         Module.__init__(self)
 
         distance_embedding_dim: int = config['model']['aggregators']['endpoint']['distance-embedding-dim']
         self.distance_embedding = torch.nn.Linear(1, distance_embedding_dim)
 
-        embeddings_dim: int = 2 * config['encoder']['bert']['embedding-dimension'] + distance_embedding_dim
-        BaseAggregator.__init__(self, embeddings_dim=embeddings_dim, name=name)
+        self._out_dim: int = 2 * input_dim + distance_embedding_dim
+        BaseAggregator.__init__(self, input_dim=self._out_dim, name=name)
+
+    @property
+    def output_dim(self):
+        return self._out_dim
 
     def aggregate(self, embeddings: torch.Tensor, spans: List[torch.Tensor], *args, **kwargs) -> torch.Tensor:
         agg_embeddings: List = list()

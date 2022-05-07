@@ -11,7 +11,7 @@ from typing import List
 
 
 class ChunkerModel(BaseModel):
-    def __init__(self, model_name: str = 'Chunker Model'):
+    def __init__(self, input_dim: int, model_name: str = 'Chunker Model'):
         super(ChunkerModel, self).__init__(model_name)
         self.chunk_loss_ignore = DiceLoss(ignore_index=ChunkCode.NOT_RELEVANT,
                                           alpha=config['model']['chunker']['dice-loss-alpha'])
@@ -20,7 +20,7 @@ class ChunkerModel(BaseModel):
                                       ignore_index=ChunkCode.NOT_RELEVANT).to(config['general']['device'])
 
         self.dropout = torch.nn.Dropout(0.1)
-        self.linear_layer_1 = torch.nn.Linear(config['encoder']['bert']['embedding-dimension'], 100)
+        self.linear_layer_1 = torch.nn.Linear(input_dim, 100)
         self.linear_layer_2 = torch.nn.Linear(100, 10)
         self.final_layer = torch.nn.Linear(10, 2)
         self.softmax = torch.nn.Softmax(dim=-1)
