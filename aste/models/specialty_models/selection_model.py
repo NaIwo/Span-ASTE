@@ -22,13 +22,22 @@ class Selector(BaseModel):
         self.metrics: Metric = Metric(name='Span Selector Metrics', metrics=metrics,
                                       ignore_index=self._ignore_index).to(config['general']['device'])
 
-        self.linear_layer1 = torch.nn.Linear(input_dim, 100)
+        self.dropout = torch.nn.Dropout(0.1)
+        self.batch_norm = torch.nn.BatchNorm2d(input_dim)
+        self.linear_layer_1 = torch.nn.Linear(input_dim, 500)
+        self.linear_layer_2 = torch.nn.Linear(500, 250)
+        self.linear_layer_3 = torch.nn.Linear(250, 100)
         self.final_layer = torch.nn.Linear(100, 2)
         self.softmax = torch.nn.Softmax(dim=-1)
 
     def forward(self, data: torch.Tensor) -> torch.Tensor:
-        data = self.linear_layer1(data)
-        data = torch.relu(data)
+        data = self.batch_norm(torch.permute(data, (0, 2, 1)))
+        data = torch.permute(data, (0, 2, 1))
+        layer: torch.nn.Linear
+        for layer in [self.linear_layer_1, self.linear_layer_2, self.linear_layer_3]:
+            data = layer(data)
+            data = torch.relu(data)
+            data = self.dropout(data)
         data = self.final_layer(data)
         return self.softmax(data)
 

@@ -20,14 +20,15 @@ class ChunkerModel(BaseModel):
                                       ignore_index=ChunkCode.NOT_RELEVANT).to(config['general']['device'])
 
         self.dropout = torch.nn.Dropout(0.1)
-        self.linear_layer_1 = torch.nn.Linear(input_dim, 100)
-        self.linear_layer_2 = torch.nn.Linear(100, 10)
+        self.linear_layer_1 = torch.nn.Linear(input_dim, 400)
+        self.linear_layer_2 = torch.nn.Linear(400, 100)
+        self.linear_layer_3 = torch.nn.Linear(100, 10)
         self.final_layer = torch.nn.Linear(10, 2)
         self.softmax = torch.nn.Softmax(dim=-1)
 
     def forward(self, data: torch.Tensor) -> torch.Tensor:
         layer: torch.nn.Linear
-        for layer in [self.linear_layer_1, self.linear_layer_2]:
+        for layer in [self.linear_layer_1, self.linear_layer_2, self.linear_layer_3]:
             data = layer(data)
             data = torch.relu(data)
             data = self.dropout(data)

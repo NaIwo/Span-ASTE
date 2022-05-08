@@ -2,7 +2,7 @@ general:
   device: cuda # {cpu, cuda}
   logging-level: INFO
 dataset:
-  batch-size: 1
+  batch-size: 4
   effective-batch-size: 4 # gradient accumulation (after (batch-size * effective-batch-size) samples the gradient will be computed)
 model:
   total-epochs: 100
@@ -23,7 +23,7 @@ model:
     loss-weight: 1.0
   triplet-extractor:
     dice-loss-alpha: 0.5
-    loss-weight: 1.0
+    loss-weight: 3.0
 encoder:
   bert:
     source: bert-base-uncased

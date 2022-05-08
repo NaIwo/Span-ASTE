@@ -64,9 +64,18 @@ class ModelLoss:
     def backward(self) -> None:
         self.full_loss.backward()
 
+    def items(self) -> ML:
+        self.detach()
+        return self
+
+    def detach(self) -> None:
+        self.chunker_loss = self.chunker_loss.detach()
+        self.span_selector_loss = self.span_selector_loss.detach()
+        self.triplet_loss = self.triplet_loss.detach()
+
     @property
     def full_loss(self) -> Tensor:
-        return self.chunker_loss + self.triplet_loss
+        return self.chunker_loss + self.span_selector_loss + self.triplet_loss
 
     @property
     def _loss_dict(self) -> Dict:

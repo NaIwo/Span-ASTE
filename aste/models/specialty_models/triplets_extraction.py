@@ -26,18 +26,21 @@ class TripletExtractorModel(BaseModel):
         self.final_metrics: Metric = Metric(name='Final predictions', metrics=metrics).to(config['general']['device'])
 
         input_dimension: int = input_dim * 2
-        self.linear_layer1 = torch.nn.Linear(input_dimension, 300)
-        self.linear_layer2 = torch.nn.Linear(300, 100)
-        # self.linear_layer3 = torch.nn.Linear(input_dimension // 4, input_dimension // 8)
-        # self.linear_layer4 = torch.nn.Linear(input_dimension // 8, 100)
+        self.linear_layer1 = torch.nn.Linear(input_dimension, 500)
+        self.linear_layer2 = torch.nn.Linear(500, 300)
+        self.linear_layer3 = torch.nn.Linear(300, 100)
+        self.linear_layer4 = torch.nn.Linear(100, 100)
         self.final_layer = torch.nn.Linear(100, 6)
         self.dropout = torch.nn.Dropout(0.1)
+        self.batch_norm = torch.nn.BatchNorm2d(input_dimension)
         self.softmax = torch.nn.Softmax(dim=-1)
 
     def forward(self, data: torch.Tensor) -> torch.Tensor:
         matrix_data = self._construct_matrix(data)
+        matrix_data = self.batch_norm(torch.permute(matrix_data, (0, 3, 1, 2)))
+        matrix_data = torch.permute(matrix_data, (0, 2, 3, 1))
         layer: torch.nn.Linear
-        for layer in [self.linear_layer1, self.linear_layer2]:
+        for layer in [self.linear_layer1, self.linear_layer2, self.linear_layer3]:
             matrix_data = layer(matrix_data)
             matrix_data = torch.relu(matrix_data)
             matrix_data = self.dropout(matrix_data)

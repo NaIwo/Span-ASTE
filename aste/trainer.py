@@ -60,19 +60,17 @@ class Trainer:
     def _training_epoch(self, train_data: DataLoader) -> ModelLoss:
         self.model.train()
         epoch_loss = ModelLoss()
-        loss = ModelLoss()
 
         batch_idx: int
         batch: Batch
         for batch_idx, batch in enumerate(bar := tqdm(train_data)):
             model_out: ModelOutput = self.model(batch)
-            loss += self.model.get_loss(model_out)
+            loss = self.model.get_loss(model_out)
+            loss.backward()
             if ((batch_idx + 1) % config['dataset']['effective-batch-size'] == 0) or (batch_idx + 1 == len(train_data)):
-                loss.backward()
                 self.optimizer.step()
                 self.optimizer.zero_grad()
-                epoch_loss += loss
-                loss = ModelLoss()
+            epoch_loss += loss.items()
             bar.set_description(f'Loss: {epoch_loss / (batch_idx + 1)} ')
         return epoch_loss / len(train_data)
 
@@ -103,7 +101,7 @@ class Trainer:
                 model_out: ModelOutput = self.model(batch)
                 self.model.update_metrics(model_out)
                 loss: ModelLoss = self.model.get_loss(model_out)
-                test_loss += loss
+                test_loss += loss.items()
                 bar.set_description(f'Test Loss: {test_loss / (batch_idx + 1)}')
             logging.info(f'Test loss: {test_loss / len(test_data)}')
             metrics: ModelMetric = self.model.get_metrics_and_reset()

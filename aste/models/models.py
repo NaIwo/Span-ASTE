@@ -7,7 +7,6 @@ from ASTE.aste.models.model_elements.embeddings import Bert, BaseEmbedding
 from ASTE.aste.models.model_elements.span_aggregators import BaseAggregator, EndPointAggregator
 from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric
 from ASTE.dataset.reader import Batch
-from ASTE.utils import config
 
 
 class BaseModel(torch.nn.Module):
@@ -65,12 +64,11 @@ class BertBaseModel(BaseModel):
 
         super(BertBaseModel, self).__init__(model_name)
         self.each_part_epochs: Dict = {
-            'chunker selector': 5,
-            'triplet': 10
+            'chunker and selector': 10,
+            'triplet': 5
         }
 
-        self.embeddings_layer_chunker: BaseEmbedding = Bert(model_name='Chunker Bert')
-        self.embeddings_layer_matrix: BaseEmbedding = Bert(model_name='Matrix Bert')
+        self.embeddings_layer_chunker: BaseEmbedding = Bert()
         self.chunker: BaseModel = ChunkerModel(input_dim=self.embeddings_layer_chunker.embedding_dim)
         self.aggregator: BaseAggregator = EndPointAggregator(input_dim=self.embeddings_layer_chunker.embedding_dim)
         self.span_selector: BaseModel = Selector(input_dim=self.aggregator.output_dim)
@@ -78,16 +76,14 @@ class BertBaseModel(BaseModel):
 
     def forward(self, batch: Batch) -> ModelOutput:
         embeddings_chunker: torch.Tensor = self.embeddings_layer_chunker(batch.sentence, batch.mask)
-        embeddings_matrix: torch.Tensor = self.embeddings_layer_matrix(batch.sentence, batch.mask)
 
         chunker_output: torch.Tensor = self.chunker(embeddings_chunker)
         predicted_spans: List[torch.Tensor] = self.chunker.get_spans_from_batch_prediction(batch, chunker_output)
 
         agg_emb_chunker: torch.Tensor = self.aggregator.aggregate(embeddings_chunker, predicted_spans)
-        agg_emb_matrix: torch.Tensor = self.aggregator.aggregate(embeddings_matrix, predicted_spans)
 
         span_selector_output: torch.Tensor = self.span_selector(agg_emb_chunker)
-        triplet_input: torch.Tensor = span_selector_output[..., 1:] * agg_emb_matrix
+        triplet_input: torch.Tensor = span_selector_output[..., 1:] * agg_emb_chunker
 
         triplet_results: torch.Tensor = self.triplets_extractor(triplet_input)
 
@@ -119,24 +115,21 @@ class BertBaseModel(BaseModel):
 
     def update_trainable_parameters(self) -> None:
         self.performed_epochs += 1
-        if self.performed_epochs < self.each_part_epochs['chunker selector']:
+        if self.performed_epochs < self.each_part_epochs['chunker and selector']:
             self.fully_trainable = False
             self.triplets_extractor.freeze()
             self.span_selector.unfreeze()
             self.chunker.unfreeze()
             self.embeddings_layer_chunker.unfreeze()
-            self.embeddings_layer_matrix.freeze()
-        elif self.performed_epochs < (self.each_part_epochs['triplet'] + self.each_part_epochs['chunker selector']):
+        elif self.performed_epochs < (self.each_part_epochs['triplet'] + self.each_part_epochs['chunker and selector']):
             self.fully_trainable = False
             self.chunker.freeze()
             self.span_selector.freeze()
             self.embeddings_layer_chunker.freeze()
-            self.embeddings_layer_matrix.unfreeze()
             self.triplets_extractor.unfreeze()
-        elif self.performed_epochs >= (self.each_part_epochs['triplet'] + self.each_part_epochs['chunker selector']):
+        elif self.performed_epochs >= (self.each_part_epochs['triplet'] + self.each_part_epochs['chunker and selector']):
             self.fully_trainable = True
             self.triplets_extractor.unfreeze()
             self.span_selector.unfreeze()
             self.chunker.unfreeze()
             self.embeddings_layer_chunker.unfreeze()
-            self.embeddings_layer_matrix.unfreeze()
