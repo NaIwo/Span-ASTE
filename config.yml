@@ -19,11 +19,11 @@ model:
     lambda-factor: 0.001
     loss-weight: 1.0
   selector:
-    dice-loss-alpha: 0.3
+    dice-loss-alpha: 0.4
     loss-weight: 1.0
   triplet-extractor:
-    dice-loss-alpha: 0.5
-    loss-weight: 3.0
+    dice-loss-alpha: 0.6
+    loss-weight: 2.0
 encoder:
   bert:
     source: bert-base-uncased

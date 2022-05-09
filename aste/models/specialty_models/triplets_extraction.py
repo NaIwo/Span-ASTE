@@ -33,17 +33,22 @@ class TripletExtractorModel(BaseModel):
         self.final_layer = torch.nn.Linear(100, 6)
         self.dropout = torch.nn.Dropout(0.1)
         self.batch_norm = torch.nn.BatchNorm2d(input_dimension)
+        self.final_batch_norm = torch.nn.BatchNorm2d(100)
         self.softmax = torch.nn.Softmax(dim=-1)
 
     def forward(self, data: torch.Tensor) -> torch.Tensor:
         matrix_data = self._construct_matrix(data)
         matrix_data = self.batch_norm(torch.permute(matrix_data, (0, 3, 1, 2)))
         matrix_data = torch.permute(matrix_data, (0, 2, 3, 1))
+
         layer: torch.nn.Linear
         for layer in [self.linear_layer_1, self.linear_layer_2, self.linear_layer_3, self.linear_layer_4]:
             matrix_data = layer(matrix_data)
             matrix_data = torch.relu(matrix_data)
             matrix_data = self.dropout(matrix_data)
+
+        matrix_data = self.final_batch_norm(torch.permute(matrix_data, (0, 3, 1, 2)))
+        matrix_data = torch.permute(matrix_data, (0, 2, 3, 1))
         matrix_data = self.final_layer(matrix_data)
         return self.softmax(matrix_data)
 

@@ -64,7 +64,7 @@ class BertBaseModel(BaseModel):
 
         super(BertBaseModel, self).__init__(model_name)
         self.each_part_epochs: Dict = {
-            'chunker and selector': 10,
+            'chunker and selector': 12,
             'triplet': 5
         }
 
