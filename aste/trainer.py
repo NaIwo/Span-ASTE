@@ -18,7 +18,7 @@ class Trainer:
                  tracker: BaseTracker = BaseTracker()):
         logging.info(f"Model '{model.model_name}' has been initialized.")
         self.model: BaseModel = model.to(config['general']['device'])
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=config['model']['learning-rate'])
+        self.optimizer = torch.optim.Adam(self.model.get_params_and_lr(), lr=config['model']['learning-rate'])
 
         self.memory = Memory()
         self.tracker: BaseTracker = tracker
@@ -42,7 +42,7 @@ class Trainer:
         logging.info(f'Training start at time: {training_start_time}')
         for epoch in range(config['model']['total-epochs']):
             self.model.update_trainable_parameters()
-            if not self.model.fully_trainable:
+            if self.model.warmup:
                 self.memory.reset()
             epoch_loss: ModelLoss = self._training_epoch(train_data)
             self.tracker.log({'Train Loss': epoch_loss.logs})

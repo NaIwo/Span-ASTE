@@ -1,7 +1,6 @@
-from ASTE.aste.models.models import BaseModel
 from ASTE.utils import config
 from ASTE.aste.tools.metrics import Metric, get_selected_metrics
-from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric
+from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
 
 import torch
 from torch.nn import CrossEntropyLoss

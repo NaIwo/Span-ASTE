@@ -1,2 +1,4 @@
 from .outputs import ModelOutput, ModelLoss, ModelMetric
-from .models import BaseModel, BertBaseModel
+from .base_model import BaseModel
+from .models import BertBaseModel
+

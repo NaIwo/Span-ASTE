@@ -1,7 +1,7 @@
 from .domain import Sentence, get_label_from_sentence
 from ASTE.utils import config
 from ASTE.dataset.domain.const import ChunkCode
-from ASTE.dataset.encoders import BaseEncoder
+from ASTE.dataset.encoders import BaseEncoder, BertEncoder
 
 import torch
 import numpy as np
@@ -39,7 +39,7 @@ class DatasetLoader:
     def __init__(self, data_path: str):
         self.data_path: str = data_path
 
-    def load(self, name: str, encoder: BaseEncoder) -> DataLoader:
+    def load(self, name: str, encoder: BaseEncoder = BertEncoder()) -> DataLoader:
         dataset: ASTEDataset = ASTEDataset(os.path.join(self.data_path, name), encoder)
         return DataLoader(dataset, batch_size=config['dataset']['batch-size'], shuffle=True, prefetch_factor=2,
                           collate_fn=self._collate_fn)

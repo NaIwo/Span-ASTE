@@ -13,12 +13,13 @@ class ModelOutput:
     NAME: str = 'Outputs'
 
     def __init__(self, batch: Batch, chunker_output: Tensor, predicted_spans: List[Tensor],
-                 span_selector_output: Tensor, triplet_results: Tensor):
+                 span_selector_output: Tensor, triplet_results: Tensor, crf_results: Tensor):
         self.batch: Batch = batch
         self.chunker_output: Tensor = chunker_output
         self.predicted_spans: List[Tensor] = predicted_spans
         self.span_selector_output: Tensor = span_selector_output
         self.triplet_results: Tensor = triplet_results
+        self.crf_results: Tensor = crf_results
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -30,7 +31,9 @@ class ModelOutput:
             'predicted_spans': f'Predicted spans num: {[spans.shape[0] for spans in self.predicted_spans]}',
             'span_selector_output': self.span_selector_output.shape,
             'triplet_results': f'Prediction shape: {self.triplet_results.shape}. '
-                               f'Number of meaningful values: {int(torch.sum(self.triplet_results > 0))}'
+                               f'Number of meaningful values: {int(torch.sum(self.triplet_results > 0))}',
+            'crf_results': f'Prediction shape: {self.crf_results.shape}. '
+                           f'Number of meaningful values: {int(torch.sum(self.crf_results > 0))}'
         })
 
 
@@ -38,21 +41,23 @@ class ModelLoss:
     NAME: str = 'Losses'
 
     def __init__(self, *, chunker_loss: Tensor = 0., span_selector_loss: Tensor = 0., triplet_loss: Tensor = 0.,
-                 weighted: bool = True):
+                 crf_loss: Tensor = 0., weighted: bool = True):
         self.chunker_loss: Tensor = chunker_loss
         self.span_selector_loss: Tensor = span_selector_loss
         self.triplet_loss: Tensor = triplet_loss
+        self.crf_loss: Tensor = crf_loss
 
         if weighted:
             self._include_weights()
 
     @classmethod
-    def from_instances(cls, *, chunker_loss: ML, triplet_loss: ML, span_selector_loss: ML,
+    def from_instances(cls, *, chunker_loss: ML, triplet_loss: ML, span_selector_loss: ML, crf_loss: ML,
                        weighted: bool = False) -> ML:
         return cls(
             chunker_loss=chunker_loss.chunker_loss,
             span_selector_loss=span_selector_loss.span_selector_loss,
             triplet_loss=triplet_loss.triplet_loss,
+            crf_loss=crf_loss.crf_loss,
             weighted=weighted
         )
 
@@ -60,6 +65,7 @@ class ModelLoss:
         self.chunker_loss *= config['model']['chunker']['loss-weight']
         self.span_selector_loss *= config['model']['selector']['loss-weight']
         self.triplet_loss *= config['model']['triplet-extractor']['loss-weight']
+        self.crf_loss *= config['model']['crf']['loss-weight']
 
     def backward(self) -> None:
         self.full_loss.backward()
@@ -72,10 +78,11 @@ class ModelLoss:
         self.chunker_loss = self.chunker_loss.detach()
         self.span_selector_loss = self.span_selector_loss.detach()
         self.triplet_loss = self.triplet_loss.detach()
+        self.crf_loss = self.crf_loss.detach()
 
     @property
     def full_loss(self) -> Tensor:
-        return self.chunker_loss + self.span_selector_loss + self.triplet_loss
+        return self.chunker_loss + self.span_selector_loss + self.triplet_loss + self.crf_loss
 
     @property
     def _loss_dict(self) -> Dict:
@@ -83,6 +90,7 @@ class ModelLoss:
             'chunker_loss': float(self.chunker_loss),
             'span_selector_loss': float(self.span_selector_loss),
             'triplet_loss': float(self.triplet_loss),
+            'crf_loss': float(self.crf_loss),
             'full_loss': float(self.full_loss)
         }
 
@@ -94,6 +102,7 @@ class ModelLoss:
             chunker_loss=self.chunker_loss + other.chunker_loss,
             span_selector_loss=self.span_selector_loss + other.span_selector_loss,
             triplet_loss=self.triplet_loss + other.triplet_loss,
+            crf_loss=self.crf_loss + other.crf_loss,
             weighted=False
         )
 
@@ -102,6 +111,7 @@ class ModelLoss:
             chunker_loss=self.chunker_loss / other,
             span_selector_loss=self.span_selector_loss / other,
             triplet_loss=self.triplet_loss / other,
+            crf_loss=self.crf_loss / other,
             weighted=False
         )
 
@@ -113,6 +123,7 @@ class ModelLoss:
             chunker_loss=self.chunker_loss * other,
             span_selector_loss=self.span_selector_loss * other,
             triplet_loss=self.triplet_loss * other,
+            crf_loss=self.crf_loss * other,
             weighted=False
         )
 
@@ -135,17 +146,19 @@ class ModelMetric:
     NAME: str = 'Metrics'
 
     def __init__(self, *, chunker_metric: Optional[Dict] = None, span_selector_metric: Optional[Dict] = None,
-                 triplet_metric: Optional[Dict] = None):
+                 triplet_metric: Optional[Dict] = None, crf_metric: Optional[Dict] = None):
         self.chunker_metric: Optional[Dict] = chunker_metric
         self.span_selector_metric: Optional[Dict] = span_selector_metric
         self.triplet_metric: Optional[Dict] = triplet_metric
+        self.crf_metric: Optional[Dict] = crf_metric
 
     @classmethod
-    def from_instances(cls, *, chunker_metric: MM, triplet_metric: MM, span_selector_metric: MM) -> MM:
+    def from_instances(cls, *, chunker_metric: MM, triplet_metric: MM, span_selector_metric: MM, crf_metric: MM) -> MM:
         return cls(
             chunker_metric=chunker_metric.chunker_metric,
             span_selector_metric=span_selector_metric.span_selector_metric,
-            triplet_metric=triplet_metric.triplet_metric
+            triplet_metric=triplet_metric.triplet_metric,
+            crf_metric=crf_metric.crf_metric
         )
 
     @property
@@ -153,7 +166,8 @@ class ModelMetric:
         return {
             'chunker_metrics': self.chunker_metric,
             'span_selector_metric': self.span_selector_metric,
-            'triplet_metric': self.triplet_metric
+            'triplet_metric': self.triplet_metric,
+            'crf_metric': self.crf_metric,
         }
 
     def __repr__(self) -> str:

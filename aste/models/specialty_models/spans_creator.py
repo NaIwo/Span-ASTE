@@ -1,7 +1,6 @@
-from ASTE.aste.models.models import BaseModel
 from ASTE.utils import config
 from ASTE.dataset.reader import Batch
-from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric
+from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
 
 import torch
 from typing import List

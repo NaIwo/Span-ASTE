@@ -5,8 +5,8 @@ from abc import abstractmethod
 
 
 class BaseAggregator:
-    def __init__(self, input_dim: int, name: str = 'base aggregator', *args, **kwargs):
-        self.name: str = name
+    def __init__(self, input_dim: int, model_name: str = 'base aggregator', *args, **kwargs):
+        self.model_name: str = model_name
         self.input_dim: int = input_dim
 
     def aggregate(self, embeddings: torch.Tensor, spans: List[torch.Tensor], *args, **kwargs) -> torch.Tensor:

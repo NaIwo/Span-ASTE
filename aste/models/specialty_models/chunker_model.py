@@ -1,10 +1,9 @@
-from ASTE.aste.models.models import BaseModel
 from ASTE.utils import config
 from ASTE.dataset.reader import Batch
 from ASTE.dataset.domain.const import ChunkCode
 from ASTE.aste.losses import DiceLoss
 from ASTE.aste.tools.metrics import Metric, get_selected_metrics
-from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric
+from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
 
 import torch
 from typing import List

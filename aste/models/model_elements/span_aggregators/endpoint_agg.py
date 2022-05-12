@@ -7,14 +7,14 @@ from ASTE.utils import config
 
 
 class EndPointAggregator(BaseAggregator, Module):
-    def __init__(self, input_dim: int, name: str = 'End Point Aggregator', *args, **kwargs):
+    def __init__(self, input_dim: int, model_name: str = 'End Point Aggregator', *args, **kwargs):
         Module.__init__(self)
 
         distance_embedding_dim: int = config['model']['aggregators']['endpoint']['distance-embedding-dim']
         self.distance_embedding = torch.nn.Linear(1, distance_embedding_dim)
 
         self._out_dim: int = 2 * input_dim + distance_embedding_dim
-        BaseAggregator.__init__(self, input_dim=self._out_dim, name=name)
+        BaseAggregator.__init__(self, input_dim=self._out_dim, model_name=model_name)
 
     @property
     def output_dim(self):
