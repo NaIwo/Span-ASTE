@@ -13,13 +13,13 @@ class ModelOutput:
     NAME: str = 'Outputs'
 
     def __init__(self, batch: Batch, chunker_output: Tensor, predicted_spans: List[Tensor],
-                 span_selector_output: Tensor, triplet_results: Tensor, crf_results: Tensor):
+                 span_selector_output: Tensor, triplet_results: Tensor, crf_results: Optional[Tensor] = None):
         self.batch: Batch = batch
         self.chunker_output: Tensor = chunker_output
         self.predicted_spans: List[Tensor] = predicted_spans
         self.span_selector_output: Tensor = span_selector_output
         self.triplet_results: Tensor = triplet_results
-        self.crf_results: Tensor = crf_results
+        self.crf_results: Optional[Tensor] = crf_results
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -51,13 +51,13 @@ class ModelLoss:
             self._include_weights()
 
     @classmethod
-    def from_instances(cls, *, chunker_loss: ML, triplet_loss: ML, span_selector_loss: ML, crf_loss: ML,
-                       weighted: bool = False) -> ML:
+    def from_instances(cls, *, chunker_loss: ML, triplet_loss: ML, span_selector_loss: ML,
+                       crf_loss: Optional[ML] = None, weighted: bool = False) -> ML:
         return cls(
             chunker_loss=chunker_loss.chunker_loss,
             span_selector_loss=span_selector_loss.span_selector_loss,
             triplet_loss=triplet_loss.triplet_loss,
-            crf_loss=crf_loss.crf_loss,
+            crf_loss=crf_loss.crf_loss if crf_loss is not None else 0.,
             weighted=weighted
         )
 
@@ -78,7 +78,7 @@ class ModelLoss:
         self.chunker_loss = self.chunker_loss.detach()
         self.span_selector_loss = self.span_selector_loss.detach()
         self.triplet_loss = self.triplet_loss.detach()
-        self.crf_loss = self.crf_loss.detach()
+        self.crf_loss = self.crf_loss.detach() if isinstance(self.crf_loss, Tensor) else self.crf_loss
 
     @property
     def full_loss(self) -> Tensor:
@@ -153,12 +153,13 @@ class ModelMetric:
         self.crf_metric: Optional[Dict] = crf_metric
 
     @classmethod
-    def from_instances(cls, *, chunker_metric: MM, triplet_metric: MM, span_selector_metric: MM, crf_metric: MM) -> MM:
+    def from_instances(cls, *, chunker_metric: MM, triplet_metric: MM, span_selector_metric: MM,
+                       crf_metric: Optional[MM] = None) -> MM:
         return cls(
             chunker_metric=chunker_metric.chunker_metric,
             span_selector_metric=span_selector_metric.span_selector_metric,
             triplet_metric=triplet_metric.triplet_metric,
-            crf_metric=crf_metric.crf_metric
+            crf_metric=crf_metric.crf_metric if crf_metric is not None else crf_metric
         )
 
     @property

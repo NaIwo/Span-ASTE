@@ -1,8 +1,8 @@
 import torch
 from typing import List, Dict
 
-from ASTE.aste.models.model_elements.embeddings import Bert, BaseEmbedding
-from ASTE.aste.models.model_elements.span_aggregators import BaseAggregator, EndPointAggregator
+from ASTE.aste.models.model_elements.embeddings import Bert, BaseEmbedding, BertAttention
+from ASTE.aste.models.model_elements.span_aggregators import BaseAggregator, EndPointAggregator, AttentionAggregator
 from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
 from ASTE.dataset.reader import Batch
 from ASTE.utils import config
@@ -20,44 +20,38 @@ class BertBaseModel(BaseModel):
         self.triplets_extractor: BaseModel = TripletExtractorModel(input_dim=self.aggregator.output_dim)
         self.crf: BaseModel = CRF()
 
-        epochs: List = [12, 15, 35, config['model']['total-epochs']]
+        epochs: List = [12, 15, config['model']['total-epochs'],
+                        config['model']['total-epochs'] + config['model']['unifying-epochs']]
+
         self.training_scheduler: Dict = {
             range(0, epochs[0]): {
                 'freeze': [self.triplets_extractor, self.crf],
-                'unfreeze': [self.chunker, self.span_selector, self.emb_layer],
-                'warmup': [self, self.chunker, self.span_selector, self.triplets_extractor, self.crf],
-                'not_warmup': []
+                'unfreeze': [self.chunker, self.span_selector, self.emb_layer]
             },
             range(epochs[0], epochs[1]): {
-                'freeze': [self.chunker, self.span_selector, self.emb_layer],
-                'unfreeze': [self.triplets_extractor, self.crf],
-                'warmup': [self, self.chunker, self.span_selector, self.triplets_extractor, self.crf],
-                'not_warmup': []
+                'freeze': [self.chunker, self.span_selector, self.emb_layer, self.crf],
+                'unfreeze': [self.triplets_extractor]
             },
             range(epochs[1], epochs[2]): {
-                'freeze': [],
-                'unfreeze': [self.chunker, self.span_selector, self.triplets_extractor, self.emb_layer, self.crf],
-                'warmup': [self.triplets_extractor],
-                'not_warmup': [self, self.chunker, self.span_selector, self.crf]
+                'freeze': [self.crf],
+                'unfreeze': [self.chunker, self.span_selector, self.triplets_extractor, self.emb_layer],
             },
             range(epochs[2], epochs[3]): {
-                'freeze': [],
-                'unfreeze': [self.chunker, self.span_selector, self.triplets_extractor, self.emb_layer, self.crf],
-                'warmup': [],
-                'not_warmup': [self, self.chunker, self.span_selector, self.triplets_extractor, self.crf]
+                'freeze': [self.chunker, self.span_selector, self.triplets_extractor, self.emb_layer],
+                'unfreeze': [self.crf]
             }
         }
 
     def forward(self, batch: Batch) -> ModelOutput:
-        embeddings_chunker: torch.Tensor = self.emb_layer(batch.sentence, batch.mask)
+        emb_chunker: torch.Tensor = self.emb_layer(batch.sentence, batch.mask)
 
-        chunker_output: torch.Tensor = self.chunker(embeddings_chunker)
+        chunker_output: torch.Tensor = self.chunker(emb_chunker)
         predicted_spans: List[torch.Tensor] = self.chunker.get_spans_from_batch_prediction(batch, chunker_output)
 
-        agg_emb_chunker: torch.Tensor = self.aggregator.aggregate(embeddings_chunker, predicted_spans)
+        agg_emb: torch.Tensor = self.aggregator.aggregate(emb_chunker, predicted_spans)
 
-        span_selector_output: torch.Tensor = self.span_selector(agg_emb_chunker)
-        triplet_input: torch.Tensor = span_selector_output[..., 1:] * agg_emb_chunker
+        span_selector_output: torch.Tensor = self.span_selector(agg_emb)
+        triplet_input: torch.Tensor = span_selector_output[..., 1:] * agg_emb
 
         triplet_results: torch.Tensor = self.triplets_extractor(triplet_input)
         crf_results: torch.Tensor = self.crf(triplet_results)
@@ -91,6 +85,9 @@ class BertBaseModel(BaseModel):
 
     def reset_metrics(self) -> None:
         self.chunker.reset_metrics()
+        self.triplets_extractor.reset_metrics()
+        self.span_selector.reset_metrics()
+        self.crf.reset_metrics()
 
     def get_params_and_lr(self) -> List[Dict]:
         return [
@@ -104,11 +101,15 @@ class BertBaseModel(BaseModel):
 
     def update_trainable_parameters(self) -> None:
         model: BaseModel
-        for keys, values in self.training_scheduler.items():
+        scheduler_idx: int
+        for scheduler_idx, (keys, values) in enumerate(self.training_scheduler.items()):
             if self.performed_epochs in keys:
                 [model.unfreeze() for model in values['unfreeze']]
                 [model.freeze() for model in values['freeze']]
-                [setattr(model, 'warmup', True) for model in values['warmup']]
-                [setattr(model, 'warmup', False) for model in values['not_warmup']]
+                self.warmup = scheduler_idx < 2
+                break
 
         self.performed_epochs += 1
+
+    def unifying_mode(self) -> None:
+        self.performed_epochs = config['model']['total-epochs']

@@ -8,15 +8,14 @@ from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
 import torch
 from torch.nn import CrossEntropyLoss
 from functools import lru_cache
-from typing import Tuple, List, Dict, Callable
+from typing import Tuple, List, Dict
 
 
 class TripletExtractorModel(BaseModel):
     def __init__(self, input_dim: int, model_name: str = 'Triplet Extractor Model'):
         super(TripletExtractorModel, self).__init__(model_name=model_name)
-        self._dice_loss = DiceLoss(ignore_index=ASTELabels.NOT_RELEVANT,
-                                   alpha=config['model']['triplet-extractor']['dice-loss-alpha'])
-        self._cross_entropy_loss = CrossEntropyLoss(ignore_index=ASTELabels.NOT_RELEVANT)
+
+        self.triplet_loss = CrossEntropyLoss(ignore_index=ASTELabels.NOT_RELEVANT)
 
         metrics: List = get_selected_metrics(num_classes=6)
         self.independent_metrics: Metric = Metric(name='Independent matrix predictions', metrics=metrics,
@@ -61,16 +60,11 @@ class TripletExtractorModel(BaseModel):
 
     def get_loss(self, model_out: ModelOutput) -> ModelLoss:
         true_labels: torch.Tensor = self.construct_matrix_labels(model_out.batch, tuple(model_out.predicted_spans))
-        # normalizer: torch.Tensor = torch.where(true_labels != ASTELabels.NOT_RELEVANT)[0].numel()
         triplet_loss: torch.Tensor = self.triplet_loss(
             model_out.triplet_results.view([-1, model_out.triplet_results.shape[-1]]),
             true_labels.view([-1])
         )
         return ModelLoss(triplet_loss=triplet_loss)
-
-    @property
-    def triplet_loss(self) -> Callable:
-        return self._dice_loss if self.warmup else self._cross_entropy_loss
 
     def update_metrics(self, model_out: ModelOutput) -> None:
         true_labels: torch.Tensor = self.construct_matrix_labels(model_out.batch, tuple(model_out.predicted_spans))

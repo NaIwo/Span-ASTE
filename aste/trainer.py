@@ -52,10 +52,22 @@ class Trainer:
                 logging.info(f'Early stopping performed. Patience factor: {self.memory.patience}')
                 break
 
+        self.load_model(self.save_path)
+        logging.info(f'Best epoch: {self.memory.best_epoch}')
+        logging.info(f'Starting unification training (crf postprocessing).')
+        self.model.unifying_mode()
+
+        for epoch in range(config['model']['unifying-epochs']):
+            self.model.update_trainable_parameters()
+            epoch_loss: ModelLoss = self._training_epoch(train_data)
+            self.tracker.log({'Train Loss': epoch_loss.logs})
+            logging.info(f"Epoch: {epoch + 1}/{config['model']['unifying-epochs']}. Epoch loss: {epoch_loss}")
+            self._eval(epoch=epoch, dev_data=dev_data)
+        self.save_model(self.save_path)
+
         training_stop_time: datetime.time = datetime.now()
         logging.info(f'Training stop at time: {training_stop_time}')
         logging.info(f'Training time in seconds: {(training_stop_time - training_start_time).seconds}')
-        logging.info(f'Best epoch: {self.memory.best_epoch}')
 
     def _training_epoch(self, train_data: DataLoader) -> ModelLoss:
         self.model.train()
@@ -71,7 +83,7 @@ class Trainer:
                 self.optimizer.step()
                 self.optimizer.zero_grad()
             epoch_loss += loss.items()
-            bar.set_description(f'Loss: {epoch_loss / (batch_idx + 1)} ')
+            bar.set_description(f'Loss: {epoch_loss.full_loss / (batch_idx + 1)} ')
         return epoch_loss / len(train_data)
 
     def _eval(self, epoch: int, dev_data: DataLoader) -> bool:
@@ -102,7 +114,7 @@ class Trainer:
                 self.model.update_metrics(model_out)
                 loss: ModelLoss = self.model.get_loss(model_out)
                 test_loss += loss.items()
-                bar.set_description(f'Test Loss: {test_loss / (batch_idx + 1)}')
+                bar.set_description(f'Test Loss: {test_loss.full_loss / (batch_idx + 1)}')
             logging.info(f'Test loss: {test_loss / len(test_data)}')
             metrics: ModelMetric = self.model.get_metrics_and_reset()
         self.pprint_metrics(metrics)
@@ -150,7 +162,7 @@ class Trainer:
         torch.save(self.model.state_dict(), save_path)
 
     def load_model(self, save_path: str) -> None:
-        self.model.load_state_dict(torch.load(save_path))
+        self.model.load_state_dict(torch.load(save_path), strict=False)
 
     def predict(self, sample: Batch) -> ModelOutput:
         self.model.eval()

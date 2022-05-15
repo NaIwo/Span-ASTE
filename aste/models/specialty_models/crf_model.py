@@ -52,6 +52,8 @@ class CRF(BaseModel):
         self._set_param('smoothness_weight', smoothness_weight)
         self._set_param('inv_smoothness_theta', 1 / np.broadcast_to(smoothness_theta, 2))
 
+        self.layer = torch.nn.Linear(6, 6)
+
         # BaseModel part
         self.loss_fn = DiceLoss(ignore_index=ASTELabels.NOT_RELEVANT,
                                 alpha=config['model']['crf']['dice-loss-alpha'])
@@ -84,7 +86,7 @@ class CRF(BaseModel):
             Tensor of shape ``(batch_size, height, width, n_classes)``
             with logits or (log-)probabilities of assignment to each class.
         """
-        x = torch.log(x)
+        x = self.layer(torch.log(x))
         x = x.permute(0, 3, 1, 2)
 
         batch_size, *remaining = x.shape
