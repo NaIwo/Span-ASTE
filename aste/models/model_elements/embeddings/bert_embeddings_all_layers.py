@@ -6,10 +6,10 @@ from ASTE.utils import config
 from .base_embeddings import BaseEmbedding
 
 
-class BertAttention(BaseEmbedding):
+class WeightedBert(BaseEmbedding):
     def __init__(self, model_name: str = 'Bert embedding (all layers) model'):
         dim: int = config['encoder']['bert']['embedding-dimension']
-        super(BertAttention, self).__init__(embedding_dim=dim, model_name=model_name)
+        super(WeightedBert, self).__init__(embedding_dim=dim, model_name=model_name)
         self.model: BertModel = BertModel.from_pretrained(config['model']['bert']['source'])
 
         self.linear_layer_1 = torch.nn.Linear(dim, 500)
@@ -39,6 +39,6 @@ class BertAttention(BaseEmbedding):
             attention = layer(attention)
             attention = torch.relu(attention)
             attention = self.dropout(attention)
+        attention = self.final_layer(attention).squeeze()
 
-        attention = self.final_layer(attention)
-        return self.softmax(attention.squeeze())
+        return self.softmax(attention)

@@ -2,7 +2,6 @@ import torch
 from torch.nn import Module
 from typing import List
 
-from ASTE.utils import config
 from .base_agg import BaseAggregator
 
 
@@ -11,14 +10,8 @@ class AttentionAggregator(BaseAggregator, Module):
         Module.__init__(self)
         BaseAggregator.__init__(self, input_dim=input_dim, model_name=model_name)
         self._out_dim: int = input_dim
-
-        self.linear_layer_1 = torch.nn.Linear(input_dim, 500)
-        self.linear_layer_2 = torch.nn.Linear(500, 300)
-        self.linear_layer_3 = torch.nn.Linear(300, 100)
-        self.final_layer = torch.nn.Linear(100, 1)
-        self.dropout = torch.nn.Dropout(0.1)
-        self.batch_norm = torch.nn.BatchNorm1d(input_dim)
-        self.softmax = torch.nn.Softmax(dim=-1)
+        self.query_linear = torch.nn.Linear(input_dim, input_dim)
+        self.softmax = torch.nn.Softmax(dim=0)
 
     @property
     def output_dim(self):
@@ -38,23 +31,17 @@ class AttentionAggregator(BaseAggregator, Module):
         span: torch.Tensor
         for span in sentence_spans:
             span_emb: torch.Tensor = sentence_embeddings[span[0]:span[1]+1]
-            attention = self._get_attention_weights(span_emb)
-            agg_emb: torch.Tensor = torch.sum(attention[..., None] * span_emb, dim=0)
+            attention: torch.Tensor = self._attention(span_emb)
+            agg_emb: torch.Tensor = torch.sum(attention, dim=0)
             sentence_agg_embeddings.append(agg_emb)
         return sentence_agg_embeddings
 
-    def _get_attention_weights(self, span_emb: torch.Tensor) -> torch.Tensor:
-        if span_emb.shape[0] == 1:
-            return torch.tensor(1., device=config['general']['device'])
-        attention: torch.Tensor = span_emb.unsqueeze(0)
-        attention = self.batch_norm(torch.permute(attention, (0, 2, 1)))
-        attention = torch.permute(attention, (0, 2, 1))
+    def _attention(self, span_emb: torch.Tensor) -> torch.Tensor:
+        query: torch.Tensor = self.query_linear(span_emb)
+        value: torch.Tensor = span_emb.permute(1, 0)
 
-        layer: torch.nn.Linear
-        for layer in [self.linear_layer_1, self.linear_layer_2, self.linear_layer_3]:
-            attention = layer(attention)
-            attention = torch.relu(attention)
-            attention = self.dropout(attention)
+        weights: torch.Tensor = query @ value
+        weights = self.softmax(weights)
 
-        attention = self.final_layer(attention)
-        return self.softmax(attention.squeeze())
+        attention: torch.Tensor = weights @ span_emb
+        return attention

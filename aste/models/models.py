@@ -1,7 +1,7 @@
 import torch
 from typing import List, Dict
 
-from ASTE.aste.models.model_elements.embeddings import Bert, BaseEmbedding, BertAttention
+from ASTE.aste.models.model_elements.embeddings import Bert, BaseEmbedding, WeightedBert
 from ASTE.aste.models.model_elements.span_aggregators import BaseAggregator, EndPointAggregator, AttentionAggregator
 from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
 from ASTE.dataset.reader import Batch
@@ -13,9 +13,9 @@ class BertBaseModel(BaseModel):
     def __init__(self, model_name='Bert Base Model', *args, **kwargs):
 
         super(BertBaseModel, self).__init__(model_name)
-        self.emb_layer: BaseEmbedding = Bert()
+        self.emb_layer: BaseEmbedding = WeightedBert()
         self.chunker: BaseModel = ChunkerModel(input_dim=self.emb_layer.embedding_dim)
-        self.aggregator: BaseAggregator = EndPointAggregator(input_dim=self.emb_layer.embedding_dim)
+        self.aggregator: BaseAggregator = AttentionAggregator(input_dim=self.emb_layer.embedding_dim)
         self.span_selector: BaseModel = Selector(input_dim=self.aggregator.output_dim)
         self.triplets_extractor: BaseModel = TripletExtractorModel(input_dim=self.aggregator.output_dim)
         self.crf: BaseModel = CRF()
