@@ -5,15 +5,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from typing import List, Dict
-from torch.nn import CrossEntropyLoss
-from ASTE.aste.losses import DiceLoss
-
-from ASTE.aste.models.outputs import ModelOutput, ModelLoss, ModelMetric
-from ASTE.aste.models.specialty_models import TripletExtractorModel as TEM
-from ASTE.aste.models.base_model import BaseModel
-from ASTE.aste.tools.metrics import Metric, get_selected_metrics
-from ASTE.dataset.domain.const import ASTELabels
 from ASTE.utils import config
 
 '''
@@ -22,7 +13,7 @@ https://github.com/migonch/crfseg
 '''
 
 
-class CRF(BaseModel):
+class CRF(nn.Module):
     """
     Class for learning and inference in conditional random field model using mean field approximation
     and convolutional approximation in pairwise potentials term.
@@ -38,30 +29,23 @@ class CRF(BaseModel):
     smoothness_theta : float or sequence of floats
         Initial bandwidths for each spatial feature in the gaussian smoothness kernel.
         If it is a sequence its length must be equal to ``n_spatial_dims``.
+    returns : str
+        Can be 'logits', 'proba', 'log-proba'.
     model_name : str
         Name of the model
     """
 
-    def __init__(self, filter_size: int = 11, n_iter: int = 5, smoothness_weight: int = 1, smoothness_theta: int = 1,
-                 model_name: str = 'CRF model'):
-        super(CRF, self).__init__(model_name=model_name)
+    def __init__(self, filter_size: int = 9, n_iter: int = 5, smoothness_weight: int = 1, smoothness_theta: float = 0.5,
+                 returns: str = 'logits', model_name: str = 'CRF model'):
+        super(CRF, self).__init__()
 
+        self.model_name: str = model_name
         # CRF Implementation
         self.n_iter = n_iter
+        self.returns = returns
         self.filter_size = np.broadcast_to(filter_size, 2)
         self._set_param('smoothness_weight', smoothness_weight)
         self._set_param('inv_smoothness_theta', 1 / np.broadcast_to(smoothness_theta, 2))
-
-        # BaseModel part
-        self.loss_fn = DiceLoss(ignore_index=ASTELabels.NOT_RELEVANT,
-                                alpha=config['model']['crf']['dice-loss-alpha'])
-
-        metrics: List = get_selected_metrics(num_classes=6)
-        self.independent_metrics: Metric = Metric(name='Independent matrix predictions', metrics=metrics,
-                                                  ignore_index=ASTELabels.NOT_RELEVANT).to(config['general']['device'])
-
-        metrics = get_selected_metrics(for_triplets=True)
-        self.final_metrics: Metric = Metric(name='Final predictions', metrics=metrics).to(config['general']['device'])
 
     def _set_param(self, name, init_value):
         setattr(self, name, nn.Parameter(
@@ -107,7 +91,14 @@ class CRF(BaseModel):
             # adding unary potentials
             x = negative_unary - x
 
-        output = F.softmax(x, dim=1)
+        if self.returns == 'logits':
+            output = x
+        elif self.returns == 'proba':
+            output = F.softmax(x, dim=1)
+        elif self.returns == 'log-proba':
+            output = F.log_softmax(x, dim=1)
+        else:
+            raise ValueError("Attribute ``returns`` must be 'logits', 'proba' or 'log-proba'.")
 
         return output.permute(0, 2, 3, 1)
 
@@ -216,30 +207,3 @@ class CRF(BaseModel):
             self.n_iter = 10
         else:
             self.n_iter = 5
-
-    def get_loss(self, model_out: ModelOutput) -> ModelLoss:
-        true_labels: torch.Tensor = TEM.construct_matrix_labels(model_out.batch, tuple(model_out.predicted_spans))
-        crf_loss: torch.Tensor = self.loss_fn(
-            model_out.triplet_results.view([-1, model_out.triplet_results.shape[-1]]),
-            true_labels.view([-1])
-        )
-        return ModelLoss(crf_loss=crf_loss)
-
-    def update_metrics(self, model_out: ModelOutput) -> None:
-        true_labels: torch.Tensor = TEM.construct_matrix_labels(model_out.batch, tuple(model_out.predicted_spans))
-        true_triplets: torch.Tensor = TEM.get_triplets_from_matrix(true_labels)
-        predicted_labels: torch.Tensor = torch.argmax(model_out.crf_results, dim=-1)
-        predicted_labels = torch.where(true_labels == ASTELabels.NOT_RELEVANT, true_labels, predicted_labels)
-        predicted_triplets: torch.Tensor = TEM.get_triplets_from_matrix(predicted_labels)
-
-        self.independent_metrics(predicted_labels.view([-1]), true_labels.view([-1]))
-        self.final_metrics(predicted_triplets, true_triplets)
-
-    def get_metrics(self) -> ModelMetric:
-        metrics: Dict = self.independent_metrics.compute()
-        metrics.update(self.final_metrics.compute())
-        return ModelMetric(crf_metric=metrics)
-
-    def reset_metrics(self) -> None:
-        self.independent_metrics.reset()
-        self.final_metrics.reset()

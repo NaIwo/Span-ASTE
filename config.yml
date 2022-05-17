@@ -2,11 +2,10 @@ general:
   device: cuda # {cpu, cuda}
   logging-level: INFO
 dataset:
-  batch-size: 8
+  batch-size: 4
   effective-batch-size: 1 # gradient accumulation (after (batch-size * effective-batch-size) samples the gradient will be computed)
 model:
   total-epochs: 100
-  unifying-epochs: 10
   learning-rate: 0.0001
   early-stopping: 10 # num of epochs without improvement
   best-epoch-objective: TripletF1 # you can choose: loss and all of metrics
@@ -21,14 +20,10 @@ model:
     lambda-factor: 0.001
     loss-weight: 2.0
   selector:
-    dice-loss-alpha: 0.4
+    dice-loss-alpha: 0.5
     loss-weight: 1.0
   triplet-extractor:
-    dice-loss-alpha: 0.5
     loss-weight: 3.0
-  crf:
-    dice-loss-alpha: 0.5
-    loss-weight: 1.0
 encoder:
   bert:
     source: SpanBERT/spanbert-base-cased

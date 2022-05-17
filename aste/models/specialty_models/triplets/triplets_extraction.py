@@ -2,6 +2,7 @@ from ASTE.utils import config
 from ASTE.dataset.reader import Batch
 from ASTE.dataset.domain.const import ASTELabels
 from ASTE.aste.losses import DiceLoss
+from .crf_model import CRF
 from ASTE.aste.tools.metrics import Metric, get_selected_metrics
 from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
 
@@ -17,7 +18,7 @@ class TripletExtractorModel(BaseModel):
 
         self.triplet_loss = CrossEntropyLoss(ignore_index=ASTELabels.NOT_RELEVANT)
 
-        metrics: List = get_selected_metrics(num_classes=6)
+        metrics: List = get_selected_metrics(num_classes=6, multiclass=True)
         self.independent_metrics: Metric = Metric(name='Independent matrix predictions', metrics=metrics,
                                                   ignore_index=ASTELabels.NOT_RELEVANT).to(config['general']['device'])
 
@@ -30,6 +31,7 @@ class TripletExtractorModel(BaseModel):
         self.linear_layer_3 = torch.nn.Linear(300, 100)
         self.linear_layer_4 = torch.nn.Linear(100, 100)
         self.final_layer = torch.nn.Linear(100, 6)
+        self.crf = CRF()
         self.dropout = torch.nn.Dropout(0.1)
         self.batch_norm = torch.nn.BatchNorm2d(input_dimension)
         self.final_batch_norm = torch.nn.BatchNorm2d(100)
@@ -49,6 +51,7 @@ class TripletExtractorModel(BaseModel):
         matrix_data = self.final_batch_norm(torch.permute(matrix_data, (0, 3, 1, 2)))
         matrix_data = torch.permute(matrix_data, (0, 2, 3, 1))
         matrix_data = self.final_layer(matrix_data)
+        matrix_data = self.crf(matrix_data)
         return self.softmax(matrix_data)
 
     @staticmethod
@@ -90,6 +93,14 @@ class TripletExtractorModel(BaseModel):
         return labels_matrix
 
     @staticmethod
+    def get_unfilled_labels_matrix(predicted_spans: Tuple[torch.Tensor]) -> torch.Tensor:
+        max_span_num = max([spans.shape[0] for spans in predicted_spans])
+        size: Tuple = (len(predicted_spans), max_span_num, max_span_num)
+        labels_matrix: torch.Tensor = torch.full(size=size, fill_value=ASTELabels.NOT_PAIR).to(
+            config['general']['device'])
+        return labels_matrix
+
+    @staticmethod
     def fill_one_dim_matrix(sample: Batch, labels_matrix: torch.Tensor, predicted_spans: torch.Tensor) -> None:
 
         # TODO make it more readable and add docs
@@ -120,17 +131,14 @@ class TripletExtractorModel(BaseModel):
                 for triplet_idx in torch.where(opinion_rows)[0]:
                     check_for_second_element_and_fill_if_necessary('aspect')
 
-        mask: torch.Tensor = torch.ones_like(labels_matrix).triu().bool()
-        labels_matrix[...] = torch.where(mask, labels_matrix[...], ASTELabels.NOT_RELEVANT)
-        labels_matrix[:, predicted_spans.shape[0]:] = ASTELabels.NOT_RELEVANT
-        labels_matrix[predicted_spans.shape[0]:, :] = ASTELabels.NOT_RELEVANT
+        labels_matrix = TripletExtractorModel.mask_one_dim_matrix(labels_matrix, predicted_spans.shape[0])
 
     @staticmethod
-    def get_unfilled_labels_matrix(predicted_spans: Tuple[torch.Tensor]) -> torch.Tensor:
-        max_span_num = max([spans.shape[0] for spans in predicted_spans])
-        size: Tuple = (len(predicted_spans), max_span_num, max_span_num)
-        labels_matrix: torch.Tensor = torch.full(size=size, fill_value=ASTELabels.NOT_PAIR).to(
-            config['general']['device'])
+    def mask_one_dim_matrix(labels_matrix: torch.Tensor, span_len: int) -> torch.Tensor:
+        mask: torch.Tensor = torch.ones_like(labels_matrix).triu().bool()
+        labels_matrix[...] = torch.where(mask, labels_matrix[...], ASTELabels.NOT_RELEVANT)
+        labels_matrix[:, span_len:] = ASTELabels.NOT_RELEVANT
+        labels_matrix[span_len:, :] = ASTELabels.NOT_RELEVANT
         return labels_matrix
 
     @staticmethod
@@ -154,10 +162,16 @@ class TripletExtractorModel(BaseModel):
             if diag_el not in (ASTELabels.ASPECT, ASTELabels.OPINION):
                 continue
             for col_idx in range(0, diag_idx):
-                if (diag[col_idx] not in (ASTELabels.ASPECT, ASTELabels.OPINION)) or (diag[col_idx] == diag_el):
-                    continue
                 relation: int = int(sample[col_idx, diag_idx])
-                triplets.append([sample_idx, diag_idx, col_idx, relation])
+
+                if (diag[col_idx] not in (ASTELabels.ASPECT, ASTELabels.OPINION)) or (
+                        diag[col_idx] == diag_el) or relation == ASTELabels.NOT_PAIR:
+                    continue
+
+                if diag_el == ASTELabels.ASPECT:
+                    triplets.append([sample_idx, diag_idx, col_idx, relation])
+                else:
+                    triplets.append([sample_idx, col_idx, diag_idx, relation])
         return triplets
 
     def get_metrics(self) -> ModelMetric:

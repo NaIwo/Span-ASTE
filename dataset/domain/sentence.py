@@ -1,4 +1,4 @@
-from ASTE.dataset.encoders.base_encoder import BaseEncoder
+from ASTE.dataset.encoders import BaseEncoder, BertEncoder
 
 from ast import literal_eval
 from typing import List, Tuple, TypeVar
@@ -10,11 +10,15 @@ T = TypeVar('T', bound='Triplet')
 class Sentence:
     SEP: str = '#### #### ####'
 
-    def __init__(self, raw_sentence: str, encoder: BaseEncoder):
+    def __init__(self, raw_sentence: str, encoder: BaseEncoder = BertEncoder()):
         self.encoder: BaseEncoder = encoder
         splitted_sentence: List = raw_sentence.split(Sentence.SEP)
         self.sentence: str = splitted_sentence[0]
-        triplets_info: List[Tuple] = literal_eval(splitted_sentence[1])
+        self.triplets: List[Triplet] = []
+        # If data wit labels
+        if len(splitted_sentence) == 2:
+            triplets_info: List[Tuple] = literal_eval(splitted_sentence[1])
+            self.triplets = [Triplet.from_triplet_info(triplet_info, self.sentence) for triplet_info in triplets_info]
 
         self.encoded_sentence: List[int] = self.encoder.encode(sentence=self.sentence)
         self.encoded_words_in_sentence: List = self.encoder.encode_word_by_word(sentence=self.sentence)
@@ -29,10 +33,6 @@ class Sentence:
 
         self.sentence_length: int = len(self.sentence.split())
         self.encoded_sentence_length: int = len(self.encoded_sentence)
-
-        self.triplets: List[Triplet] = list()
-        for triplet_info in triplets_info:
-            self.triplets.append(Triplet.from_triplet_info(triplet_info, self.sentence))
 
     def get_aspect_spans(self) -> List[Tuple[int, int]]:
         return self._get_selected_spans('aspect_span')
@@ -54,6 +54,9 @@ class Sentence:
 
     def get_index_after_encoding(self, idx: int) -> int:
         return self.encoder.offset + idx + sum(self.sub_words_lengths[:idx])
+
+    def get_index_before_encoding(self, idx: int) -> int:
+        return idx - self.encoder.offset - sum(self.sub_words_lengths[:idx])
 
 
 class Span:

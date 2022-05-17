@@ -16,14 +16,12 @@ from collections import Iterable
 class ASTEDataset(Dataset):
     def __init__(self, data_path: str, encoder):
         self.sentences: List[Sentence] = list()
-        self.chunk_labels: List[np.ndarray] = list()
 
         with open(data_path, 'r') as file:
             line: str
             for line in file.readlines():
                 sentence = Sentence(line.strip(), encoder)
                 self.sentences.append(sentence)
-                self.chunk_labels.append(get_label_from_sentence(sentence))
 
     def __len__(self) -> int:
         return len(self.sentences)
@@ -31,7 +29,6 @@ class ASTEDataset(Dataset):
     def __getitem__(self, idx):
         return {
             'sentence': self.sentences[idx],
-            'chunk': self.chunk_labels[idx]
         }
 
 
@@ -58,7 +55,7 @@ class DatasetLoader:
             encoded_sentences.append(torch.tensor(sample["sentence"].encoded_sentence))
             aspect_spans.append(torch.tensor(sample["sentence"].get_aspect_spans()))
             opinion_spans.append(torch.tensor(sample["sentence"].get_opinion_spans()))
-            chunk_labels.append(torch.tensor(sample["chunk"]))
+            chunk_labels.append(torch.tensor(get_label_from_sentence(sample['sentence'])))
             sub_words_masks.append(torch.tensor(sample["sentence"].sub_words_mask))
             lengths.append(sample["sentence"].encoded_sentence_length)
 
@@ -97,7 +94,7 @@ class DatasetLoader:
 
 
 class Batch:
-    def __init__(self, sentence_obj: [Sentence], sentence: torch.Tensor,
+    def __init__(self, *, sentence_obj: [Sentence], sentence: torch.Tensor,
                  aspect_spans: torch.Tensor, opinion_spans: torch.Tensor,
                  chunk_label: torch.Tensor, sub_words_masks: torch.Tensor, mask: torch.Tensor):
         self.sentence_obj: List[Sentence] = sentence_obj
@@ -108,6 +105,18 @@ class Batch:
         self.sub_words_mask: torch.Tensor = sub_words_masks
         self.mask: torch.Tensor = mask
 
+    @classmethod
+    def from_sentence(cls, sentence: Sentence):
+        return cls(
+            sentence_obj=[sentence],
+            sentence=torch.tensor([sentence.encoded_sentence]).to(config['general']['device']),
+            sub_words_masks=torch.tensor([sentence.sub_words_mask]).to(config['general']['device']),
+            mask=torch.ones(size=(1, len(sentence.encoded_sentence))).to(config['general']['device']),
+            aspect_spans=torch.tensor([[]]),
+            opinion_spans=torch.tensor([[]]),
+            chunk_label=torch.tensor([[]])
+        )
+
     def __iter__(self):
         self.num: int = -1
         return self
@@ -116,10 +125,13 @@ class Batch:
         self.num += 1
         if self.num >= len(self.sentence_obj):
             raise StopIteration
-        return Batch([self.sentence_obj[self.num]],
-                     self.sentence[self.num].unsqueeze(0),
-                     self.aspect_spans[self.num].unsqueeze(0),
-                     self.opinion_spans[self.num].unsqueeze(0),
-                     self.chunk_label[self.num].unsqueeze(0),
-                     self.sub_words_mask[self.num].unsqueeze(0),
-                     self.mask[self.num].unsqueeze(0))
+        return Batch(sentence_obj=[self.sentence_obj[self.num]],
+                     sentence=self.sentence[self.num].unsqueeze(0),
+                     aspect_spans=self.aspect_spans[self.num].unsqueeze(0),
+                     opinion_spans=self.opinion_spans[self.num].unsqueeze(0),
+                     chunk_label=self.chunk_label[self.num].unsqueeze(0),
+                     sub_words_masks=self.sub_words_mask[self.num].unsqueeze(0),
+                     mask=self.mask[self.num].unsqueeze(0))
+
+    def __len__(self) -> int:
+        return len(self.sentence_obj)

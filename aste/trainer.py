@@ -2,6 +2,7 @@ from ASTE.utils import config
 from .tools import Memory, BaseTracker
 from ASTE.dataset.reader import Batch
 from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
+from ASTE.dataset.domain.sentence import Sentence
 
 import torch
 from torch.utils.data import DataLoader
@@ -52,22 +53,12 @@ class Trainer:
                 logging.info(f'Early stopping performed. Patience factor: {self.memory.patience}')
                 break
 
-        self.load_model(self.save_path)
-        logging.info(f'Best epoch: {self.memory.best_epoch}')
-        logging.info(f'Starting unification training (crf postprocessing).')
-        self.model.unifying_mode()
-
-        for epoch in range(config['model']['unifying-epochs']):
-            self.model.update_trainable_parameters()
-            epoch_loss: ModelLoss = self._training_epoch(train_data)
-            self.tracker.log({'Train Loss': epoch_loss.logs})
-            logging.info(f"Epoch: {epoch + 1}/{config['model']['unifying-epochs']}. Epoch loss: {epoch_loss}")
-            self._eval(epoch=epoch, dev_data=dev_data)
-        self.save_model(self.save_path)
-
         training_stop_time: datetime.time = datetime.now()
+        logging.info(f'Best epoch: {self.memory.best_epoch}')
         logging.info(f'Training stop at time: {training_stop_time}')
         logging.info(f'Training time in seconds: {(training_stop_time - training_start_time).seconds}')
+        self.load_model(self.save_path)
+        logging.info(f'Best model weights loaded.')
 
     def _training_epoch(self, train_data: DataLoader) -> ModelLoss:
         self.model.train()
@@ -89,7 +80,7 @@ class Trainer:
     def _eval(self, epoch: int, dev_data: DataLoader) -> bool:
         if dev_data is not None:
             values_dict: Dict = dict()
-            eval_out: Dict[str, Union[ModelOutput, ModelLoss, ModelMetric]] = self.test(dev_data)
+            eval_out: Dict[str, Union[ModelLoss, ModelMetric]] = self.test(dev_data)
             values_dict.update(eval_out[ModelMetric.NAME].triplet_metric)
             values_dict['Test loss'] = eval_out[ModelLoss.NAME].full_loss
             self.tracker.log({'Test Loss': eval_out[ModelLoss.NAME].logs,
@@ -102,7 +93,7 @@ class Trainer:
                 return True
         return False
 
-    def test(self, test_data: DataLoader) -> Dict[str, Union[ModelOutput, ModelLoss, ModelMetric]]:
+    def test(self, test_data: DataLoader) -> Dict[str, Union[ModelLoss, ModelMetric]]:
         self.model.eval()
         logging.info(f'Test started...')
         test_loss = ModelLoss()
@@ -120,7 +111,6 @@ class Trainer:
         self.pprint_metrics(metrics)
         test_loss = test_loss / len(test_data)
         return {
-            ModelOutput.NAME: model_out,
             ModelLoss.NAME: test_loss,
             ModelMetric.NAME: metrics
         }
@@ -164,7 +154,20 @@ class Trainer:
     def load_model(self, save_path: str) -> None:
         self.model.load_state_dict(torch.load(save_path), strict=False)
 
-    def predict(self, sample: Batch) -> ModelOutput:
+    def predict(self, sample: Union[Batch, Sentence]) -> ModelOutput:
+        if isinstance(sample, Batch):
+            return self.predict_batch(sample)
+        elif isinstance(sample, Sentence):
+            return self.predict_sentence(sample)
+
+    def predict_batch(self, sample: Batch) -> ModelOutput:
+        self.model.eval()
+        with torch.no_grad():
+            out: ModelOutput = self.model(sample)
+        return out
+
+    def predict_sentence(self, sample: Sentence) -> ModelOutput:
+        sample = Batch.from_sentence(sample)
         self.model.eval()
         with torch.no_grad():
             out: ModelOutput = self.model(sample)

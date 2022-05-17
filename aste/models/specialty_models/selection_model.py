@@ -3,7 +3,6 @@ from ASTE.aste.tools.metrics import Metric, get_selected_metrics
 from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
 
 import torch
-from torch.nn import CrossEntropyLoss
 from ASTE.aste.losses import DiceLoss
 from torch.nn.utils.rnn import pad_sequence
 from functools import lru_cache
@@ -15,7 +14,7 @@ class Selector(BaseModel):
         super(Selector, self).__init__(model_name=model_name)
         self._ignore_index: int = -1
         self.selector_loss = DiceLoss(ignore_index=self._ignore_index,
-                                      alpha=config['model']['triplet-extractor']['dice-loss-alpha'])
+                                      alpha=config['model']['selector']['dice-loss-alpha'])
 
         metrics: List = get_selected_metrics(multiclass=False)
         self.metrics: Metric = Metric(name='Span Selector Metrics', metrics=metrics,
