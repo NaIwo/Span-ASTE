@@ -90,29 +90,29 @@ ZERO: Tensor = torch.tensor(0., device=config['general']['device'])
 class ModelLoss:
     NAME: str = 'Losses'
 
-    def __init__(self, *, chunker_loss: Tensor = ZERO, span_selector_loss: Tensor = ZERO, triplet_loss: Tensor = ZERO,
-                 weighted: bool = True):
+    def __init__(self, *, chunker_loss: Tensor = ZERO, span_selector_loss: Tensor = ZERO,
+                 triplet_extractor_loss: Tensor = ZERO, weighted: bool = True):
         self.chunker_loss: Tensor = chunker_loss
         self.span_selector_loss: Tensor = span_selector_loss
-        self.triplet_loss: Tensor = triplet_loss
+        self.triplet_extractor_loss: Tensor = triplet_extractor_loss
 
         if weighted:
             self._include_weights()
 
     @classmethod
-    def from_instances(cls, *, chunker_loss: ML, triplet_loss: ML, span_selector_loss: ML,
+    def from_instances(cls, *, chunker_loss: ML, triplet_extractor_loss: ML, span_selector_loss: ML,
                        weighted: bool = False) -> ML:
         return cls(
             chunker_loss=chunker_loss.chunker_loss,
             span_selector_loss=span_selector_loss.span_selector_loss,
-            triplet_loss=triplet_loss.triplet_loss,
+            triplet_extractor_loss=triplet_extractor_loss.triplet_extractor_loss,
             weighted=weighted
         )
 
     def _include_weights(self) -> None:
         self.chunker_loss *= config['model']['chunker']['loss-weight']
         self.span_selector_loss *= config['model']['selector']['loss-weight']
-        self.triplet_loss *= config['model']['triplet-extractor']['loss-weight']
+        self.triplet_extractor_loss *= config['model']['triplet-extractor']['loss-weight']
 
     def backward(self) -> None:
         self.full_loss.backward()
@@ -124,18 +124,18 @@ class ModelLoss:
     def detach(self) -> None:
         self.chunker_loss = self.chunker_loss.detach()
         self.span_selector_loss = self.span_selector_loss.detach()
-        self.triplet_loss = self.triplet_loss.detach()
+        self.triplet_extractor_loss = self.triplet_extractor_loss.detach()
 
     @property
     def full_loss(self) -> Tensor:
-        return self.chunker_loss + self.span_selector_loss + self.triplet_loss
+        return self.chunker_loss + self.span_selector_loss + self.triplet_extractor_loss
 
     @property
     def _loss_dict(self) -> Dict:
         return {
             'chunker_loss': float(self.chunker_loss),
             'span_selector_loss': float(self.span_selector_loss),
-            'triplet_loss': float(self.triplet_loss),
+            'triplet_extractor_loss': float(self.triplet_extractor_loss),
             'full_loss': float(self.full_loss)
         }
 
@@ -150,7 +150,7 @@ class ModelLoss:
         return ModelLoss(
             chunker_loss=self.chunker_loss + other.chunker_loss,
             span_selector_loss=self.span_selector_loss + other.span_selector_loss,
-            triplet_loss=self.triplet_loss + other.triplet_loss,
+            triplet_extractor_loss=self.triplet_extractor_loss + other.triplet_extractor_loss,
             weighted=False
         )
 
@@ -158,7 +158,7 @@ class ModelLoss:
         return ModelLoss(
             chunker_loss=self.chunker_loss / other,
             span_selector_loss=self.span_selector_loss / other,
-            triplet_loss=self.triplet_loss / other,
+            triplet_extractor_loss=self.triplet_extractor_loss / other,
             weighted=False
         )
 
@@ -169,7 +169,7 @@ class ModelLoss:
         return ModelLoss(
             chunker_loss=self.chunker_loss * other,
             span_selector_loss=self.span_selector_loss * other,
-            triplet_loss=self.triplet_loss * other,
+            triplet_extractor_loss=self.triplet_extractor_loss * other,
             weighted=False
         )
 

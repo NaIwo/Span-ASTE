@@ -67,7 +67,7 @@ class TripletExtractorModel(BaseModel):
             model_out.triplet_results.view([-1, model_out.triplet_results.shape[-1]]),
             true_labels.view([-1])
         )
-        return ModelLoss(triplet_loss=triplet_loss)
+        return ModelLoss(triplet_extractor_loss=triplet_loss)
 
     def update_metrics(self, model_out: ModelOutput) -> None:
         true_labels: torch.Tensor = self.construct_matrix_labels(model_out.batch, tuple(model_out.predicted_spans))

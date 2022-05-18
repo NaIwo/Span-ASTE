@@ -57,7 +57,7 @@ class BertBaseModel(BaseModel):
 
     def get_loss(self, model_out: ModelOutput) -> ModelLoss:
         return ModelLoss.from_instances(chunker_loss=self.chunker.get_loss(model_out) * self.chunker.trainable,
-                                        triplet_loss=self.triplets_extractor.get_loss(
+                                        triplet_extractor_loss=self.triplets_extractor.get_loss(
                                             model_out) * self.triplets_extractor.trainable,
                                         span_selector_loss=self.span_selector.get_loss(
                                             model_out) * self.span_selector.trainable)
