@@ -3,6 +3,7 @@ from torch import Tensor
 from typing import List, Dict, TypeVar, Optional, Tuple
 from functools import lru_cache
 import json
+import os
 
 from ASTE.utils import config
 from ASTE.dataset.reader import Batch
@@ -30,8 +31,8 @@ class ModelOutput:
         return str(self.result)
 
     def save(self, path: str) -> None:
+        os.makedirs(path[:path.rfind(os.sep)], exist_ok=True)
         triplets: List = self._triplet_results_for_save()
-
         idx: int
         triplet: List
         with open(path, 'a') as f:
@@ -147,7 +148,8 @@ class ModelLoss:
         }
 
     def to_json(self, path: str) -> None:
-        with open(path, 'w') as f:
+        os.makedirs(path[:path.rfind(os.sep)], exist_ok=True)
+        with open(path, 'a') as f:
             json.dump(self._loss_dict, f)
 
     def __radd__(self, other: ML) -> ML:
@@ -221,7 +223,8 @@ class ModelMetric:
         }
 
     def to_json(self, path: str) -> None:
-        with open(path, 'w') as f:
+        os.makedirs(path[:path.rfind(os.sep)], exist_ok=True)
+        with open(path, 'a') as f:
             json.dump(self._all_metrics, f)
 
     def __repr__(self) -> str:

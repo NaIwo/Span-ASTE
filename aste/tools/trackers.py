@@ -1,7 +1,7 @@
 from ASTE.utils import config
 
 import wandb
-from typing import Dict
+from typing import Dict, Optional
 
 
 class BaseTracker:
@@ -18,7 +18,7 @@ class BaseTracker:
     def watch(self, model) -> None:
         pass
 
-    def init(self) -> None:
+    def init(self, name: Optional[str] = None) -> None:
         pass
 
 
@@ -33,8 +33,8 @@ class WandbTracker(BaseTracker):
             if key not in not_relevant_keys:
                 self.config[key] = value
 
-    def init(self) -> None:
-        self.tracker.init(project=self.project, entity=self.entity, config=self.config)
+    def init(self, name: Optional[str] = None) -> None:
+        self.tracker.init(project=self.project, entity=self.entity, config=self.config, name=name)
 
     def add_config(self, new_config: Dict) -> None:
         self.tracker.config.update(new_config)
