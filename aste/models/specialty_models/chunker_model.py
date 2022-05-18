@@ -34,19 +34,21 @@ class ChunkerModel(BaseModel):
         data = self.final_layer(data)
         return self.softmax(data)
 
-    def get_spans_from_batch_prediction(self, batch: Batch, predictions: torch.Tensor) -> List[torch.Tensor]:
+    @staticmethod
+    def get_spans_from_batch_prediction(batch: Batch, predictions: torch.Tensor) -> List[torch.Tensor]:
         results: List[torch.Tensor] = list()
         predictions: torch.Tensor = torch.argmax(predictions, dim=-1)
 
         sample: Batch
         prediction: torch.Tensor
         for sample, prediction in zip(batch, predictions):
-            predicted_spans: torch.Tensor = self._get_spans_from_single_sample(sample, prediction)
+            predicted_spans: torch.Tensor = ChunkerModel._get_spans_from_single_sample(sample, prediction)
             results.append(predicted_spans)
         return results
 
-    def _get_spans_from_single_sample(self, sample: Batch, prediction: torch.Tensor) -> torch.Tensor:
-        prediction = self._get_chunk_indexes(sample, prediction)
+    @staticmethod
+    def _get_spans_from_single_sample(sample: Batch, prediction: torch.Tensor) -> torch.Tensor:
+        prediction = ChunkerModel._get_chunk_indexes(sample, prediction)
         predicted_spans: torch.Tensor = prediction.unfold(0, 2, 1).clone()
         # Because we perform split ->before<- selected word.
         predicted_spans[:, 1] -= 1

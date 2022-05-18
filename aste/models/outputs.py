@@ -1,6 +1,7 @@
 import torch
 from torch import Tensor
 from typing import List, Dict, TypeVar, Optional, Tuple
+from functools import lru_cache
 import json
 
 from ASTE.utils import config
@@ -26,14 +27,7 @@ class ModelOutput:
         return self.__str__()
 
     def __str__(self):
-        return str({
-            'batch': [sample.sentence_obj[0].sentence for sample in self.batch],
-            'chunker_output': self.chunker_output.shape,
-            'predicted_spans': f'Predicted spans num: {[spans.shape[0] for spans in self.predicted_spans]}',
-            'span_selector_output': self.span_selector_output.shape,
-            'triplet_results': f'Prediction shape: {self.triplet_results.shape}. '
-                               f'Number of meaningful values: {int(torch.sum(self.triplet_results > 0))}'
-        })
+        return str(self.result)
 
     def save(self, path: str) -> None:
         triplets: List = self._triplet_results_for_save()
@@ -45,9 +39,22 @@ class ModelOutput:
                 line: str = f'{self.batch.sentence_obj[idx].sentence}{self.batch.sentence_obj[idx].SEP}{str(triplet)}\n'
                 f.write(line)
 
+    @property
+    def result(self) -> Dict:
+        triplets: List = self._triplet_results_for_save()
+        results: Dict = dict()
+
+        idx: int
+        triplet: List
+        for idx, triplet in enumerate(triplets):
+            results[self.batch.sentence_obj[idx].sentence] = triplet
+
+        return results
+
+    @lru_cache(maxsize=None)
     def _triplet_results_for_save(self) -> List:
         triplet_results: List = [[] for _ in range(len(self.batch))]
-        triplets: List[Tensor] = self._get_triplets_from_matrix()
+        triplets: Tensor = self._get_triplets_from_matrix()
 
         for triplet in triplets:
             sent_idx: int = int(triplet[0].cpu())

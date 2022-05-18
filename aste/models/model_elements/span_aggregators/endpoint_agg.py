@@ -20,15 +20,6 @@ class EndPointAggregator(BaseAggregator, Module):
     def output_dim(self):
         return self._out_dim
 
-    def aggregate(self, embeddings: torch.Tensor, spans: List[torch.Tensor], *args, **kwargs) -> torch.Tensor:
-        agg_embeddings: List = list()
-        sentence_embeddings: torch.Tensor
-        sentence_spans: torch.Tensor
-        for sentence_embeddings, sentence_spans in zip(embeddings, spans):
-            sentence_agg_embeddings = self._get_agg_sentence_embeddings(sentence_embeddings, sentence_spans)
-            agg_embeddings.append(torch.stack(sentence_agg_embeddings, dim=0))
-        return self.pad_sequence(agg_embeddings)
-
     def _get_agg_sentence_embeddings(self, sentence_embeddings: torch.Tensor, sentence_spans: torch.Tensor) -> List:
         sentence_agg_embeddings: List = list()
         span: torch.Tensor
