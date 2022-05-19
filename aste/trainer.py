@@ -38,7 +38,7 @@ class Trainer:
         self.tracker.init()
         self.tracker.watch(self.model)
 
-        os.makedirs(self.save_path[:self.save_path.rfind(os.sep)], exist_ok=False)
+        os.makedirs(self.save_path[:self.save_path.rfind(os.sep)], exist_ok=True)
         training_start_time: datetime.time = datetime.now()
         logging.info(f'Training start at time: {training_start_time}')
         for epoch in range(config['model']['total-epochs']):
@@ -59,6 +59,7 @@ class Trainer:
         logging.info(f'Training time in seconds: {(training_stop_time - training_start_time).seconds}')
         self.load_model(self.save_path)
         logging.info(f'Best model weights loaded.')
+        self.tracker.finish()
 
     def _training_epoch(self, train_data: DataLoader) -> ModelLoss:
         self.model.train()

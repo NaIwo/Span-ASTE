@@ -18,6 +18,9 @@ class BaseTracker:
     def watch(self, model) -> None:
         pass
 
+    def finish(self) -> None:
+        pass
+
     def init(self, name: Optional[str] = None) -> None:
         pass
 
@@ -35,6 +38,9 @@ class WandbTracker(BaseTracker):
 
     def init(self, name: Optional[str] = None) -> None:
         self.tracker.init(project=self.project, entity=self.entity, config=self.config, name=name)
+
+    def finish(self) -> None:
+        self.tracker.finish()
 
     def add_config(self, new_config: Dict) -> None:
         self.tracker.config.update(new_config)

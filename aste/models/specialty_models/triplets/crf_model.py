@@ -35,7 +35,7 @@ class CRF(nn.Module):
         Name of the model
     """
 
-    def __init__(self, filter_size: int = 9, n_iter: int = 5, smoothness_weight: int = 1, smoothness_theta: float = 0.9,
+    def __init__(self, filter_size: int = 9, n_iter: int = 5, smoothness_weight: int = 1, smoothness_theta: float = 1.0,
                  returns: str = 'logits', model_name: str = 'CRF model'):
         super(CRF, self).__init__()
 
