@@ -27,7 +27,7 @@ import torch.nn.functional as F
 from torch import Tensor
 from typing import Optional
 
-from ASTE.aste.utils import ignore_index, select_index
+from ASTE.aste.utils import ignore_index
 
 
 class DiceLoss(nn.Module):
@@ -86,7 +86,6 @@ class DiceLoss(nn.Module):
         self.select_index = select_index
 
     @ignore_index
-    @select_index
     def forward(self, input: Tensor, target: Tensor, *, mask: Optional[Tensor] = None) -> Tensor:
         logits_size = input.shape[-1]
 

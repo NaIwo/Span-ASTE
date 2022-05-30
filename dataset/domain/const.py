@@ -8,8 +8,8 @@ class ChunkCode(IntEnum):
 
 
 class ASTELabels(IntEnum):
-    POS: int = 5
-    NEU: int = 4
+    NEU: int = 5
+    POS: int = 4
     NEG: int = 3
     OPINION: int = 2
     ASPECT: int = 1

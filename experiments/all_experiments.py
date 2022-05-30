@@ -1,5 +1,5 @@
-from dataset.reader import DatasetLoader
-from utils import set_up_logger, config
+from ASTE.dataset.reader import DatasetLoader
+from ASTE.utils import set_up_logger, config
 from ASTE.aste.trainer import Trainer
 from ASTE.aste.models import BaseModel, BertBaseModel
 from ASTE.aste.tools import WandbTracker, BaseTracker
@@ -69,11 +69,11 @@ if __name__ == '__main__':
         experiment_idx: int
         for experiment_idx in range(NUM_EXPERIMENTS):
             data_path: str = os.path.join(os.getcwd(), 'dataset', 'data', 'ASTE_data_v2', dataset_name)
-            save_path: str = os.path.join(os.getcwd(), 'experiment_results', f'{dataset_name}',
+            save_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}',
                                           f'model.pth')
-            metric_save_path: str = os.path.join(os.getcwd(), 'experiment_results', f'{dataset_name}',
+            metric_save_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}',
                                                  f'metrics_results_{experiment_idx}.json')
-            loss_save_path: str = os.path.join(os.getcwd(), 'experiment_results', f'{dataset_name}',
+            loss_save_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}',
                                                f'losses_results_{experiment_idx}.json')
 
             # RUN EXPERIMENTS
@@ -88,6 +88,7 @@ if __name__ == '__main__':
         for metric_name, score in final_metrics_results[dataset_name].items():
             final_metrics_results[dataset_name][metric_name] = score / NUM_EXPERIMENTS
 
-    final_results: str = os.path.join(os.getcwd(), 'experiment_results', f'{dataset_name}', f'final_results.json')
+    final_results: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}',
+                                      f'final_results.json')
     with open(final_results, 'w') as f:
         json.dump(final_results, f)

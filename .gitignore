@@ -129,5 +129,5 @@ dmypy.json
 .pyre/
 
 /results/
-/experiment_results/
+/experiments/experiment_results/
 /wandb/

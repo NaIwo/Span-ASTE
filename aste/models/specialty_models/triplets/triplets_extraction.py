@@ -1,7 +1,6 @@
 from ASTE.utils import config
 from ASTE.dataset.reader import Batch
 from ASTE.dataset.domain.const import ASTELabels
-from ASTE.aste.losses import DiceLoss
 from .crf_model import CRF
 from ASTE.aste.tools.metrics import Metric, get_selected_metrics
 from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
@@ -30,7 +29,8 @@ class TripletExtractorModel(BaseModel):
         self.linear_layer_2 = torch.nn.Linear(500, 300)
         self.linear_layer_3 = torch.nn.Linear(300, 100)
         self.linear_layer_4 = torch.nn.Linear(100, 100)
-        self.final_layer = torch.nn.Linear(100, 6)
+        # 3 is responsible for aspect, opinion, and not_pair
+        self.final_layer = torch.nn.Linear(100, config['dataset']['number-of-polarities'] + 3)
         self.crf = CRF()
         self.dropout = torch.nn.Dropout(0.1)
         self.batch_norm = torch.nn.BatchNorm2d(input_dimension)

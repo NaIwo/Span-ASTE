@@ -4,14 +4,15 @@ general:
 dataset:
   batch-size: 16
   effective-batch-size: 1 # gradient accumulation (after (batch-size * effective-batch-size) samples the gradient will be computed)
+  number-of-polarities: 3
 model:
-  total-epochs: 100
+  total-epochs: 120
   learning-rate: 0.0001
-  early-stopping: 12 # num of epochs without improvement
+  early-stopping: 20 # num of epochs without improvement
   best-epoch-objective: TripletF1 # you can choose: loss and all of metrics
   bert:
     learning-rate: 0.00001
-    source: SpanBERT/spanbert-base-cased
+    source: bert-base-cased
   aggregators:
     endpoint:
       distance-embedding-dim: 3
@@ -26,5 +27,5 @@ model:
     loss-weight: 3.0
 encoder:
   bert:
-    source: SpanBERT/spanbert-base-cased
+    source: bert-base-cased
     embedding-dimension: 768

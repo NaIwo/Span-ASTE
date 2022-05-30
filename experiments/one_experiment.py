@@ -1,5 +1,5 @@
-from dataset.reader import DatasetLoader
-from utils import set_up_logger, config
+from ASTE.dataset.reader import DatasetLoader
+from ASTE.utils import set_up_logger, config
 from ASTE.aste.trainer import Trainer
 from ASTE.aste.models import BaseModel, BertBaseModel
 from ASTE.aste.tools import WandbTracker, BaseTracker
@@ -75,11 +75,10 @@ if __name__ == '__main__':
     dataset_name: str = arg.dataset_name
     experiment_idx: int = arg.id
     data_path: str = os.path.join(os.getcwd(), 'dataset', 'data', 'ASTE_data_v2', dataset_name)
-    save_path: str = os.path.join(os.getcwd(), 'experiment_results', f'{dataset_name}',
-                                  f'model.pth')
-    metric_save_path: str = os.path.join(os.getcwd(), 'experiment_results', f'{dataset_name}',
+    save_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}', f'model.pth')
+    metric_save_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}',
                                          f'metrics_results_{experiment_idx}.json')
-    loss_save_path: str = os.path.join(os.getcwd(), 'experiment_results', f'{dataset_name}',
+    loss_save_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}',
                                        f'losses_results_{experiment_idx}.json')
 
     # RUN EXPERIMENTS
