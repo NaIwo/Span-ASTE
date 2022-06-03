@@ -4,6 +4,7 @@ from ASTE.aste.trainer import Trainer
 from ASTE.aste.models import BaseModel, BertBaseModel
 from ASTE.aste.tools import WandbTracker, BaseTracker
 from ASTE.aste.models import ModelMetric, ModelLoss
+from ASTE.aste.utils import to_json
 
 import os
 import json
@@ -13,6 +14,7 @@ from torch.cuda import empty_cache
 from collections import defaultdict
 
 NUM_EXPERIMENTS: int = 7
+SAVE_DIR_NAME: str = ''
 
 
 def log_introductory_info() -> None:
@@ -46,6 +48,8 @@ def run() -> Dict:
         dev_score = local_results[ModelMetric.NAME].triplet_metric['TripletF1']
 
     local_results: Dict = trainer.test(test_data)
+    coverage_results: Dict = trainer.check_coverage_detected_spans(test_data)
+    to_json(data_to_save=coverage_results, path=coverage_save_path)
 
     local_results[ModelMetric.NAME].to_json(path=metric_save_path)
     local_results[ModelLoss.NAME].to_json(path=loss_save_path)
@@ -70,11 +74,13 @@ if __name__ == '__main__':
         for experiment_idx in range(NUM_EXPERIMENTS):
             data_path: str = os.path.join(os.getcwd(), 'dataset', 'data', 'ASTE_data_v2', dataset_name)
             save_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}',
-                                          f'model.pth')
+                                          SAVE_DIR_NAME, f'model.pth')
             metric_save_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}',
-                                                 f'metrics_results_{experiment_idx}.json')
+                                                 SAVE_DIR_NAME, f'metrics_results_{experiment_idx}.json')
             loss_save_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}',
-                                               f'losses_results_{experiment_idx}.json')
+                                               SAVE_DIR_NAME, f'losses_results_{experiment_idx}.json')
+            coverage_save_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}',
+                                                   SAVE_DIR_NAME, f'coverage_results_{experiment_idx}.json')
 
             # RUN EXPERIMENTS
             results: Dict = run()
@@ -89,6 +95,6 @@ if __name__ == '__main__':
             final_metrics_results[dataset_name][metric_name] = score / NUM_EXPERIMENTS
 
     final_results: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}',
-                                      f'final_results.json')
+                                      SAVE_DIR_NAME, f'final_results.json')
     with open(final_results, 'w') as f:
         json.dump(final_results, f)

@@ -1,5 +1,8 @@
 import torch
+import logging
+from tqdm import tqdm
 from typing import List, Dict
+from torch.utils.data import DataLoader
 
 from ASTE.aste.models.model_elements.embeddings import Bert, BaseEmbedding, WeightedBert
 from ASTE.aste.models.model_elements.span_aggregators import BaseAggregator, EndPointAggregator, AttentionAggregator
@@ -97,3 +100,32 @@ class BertBaseModel(BaseModel):
                 break
 
         self.performed_epochs += 1
+
+    @torch.no_grad()
+    def check_coverage_detected_spans(self, data: DataLoader) -> Dict:
+        num_predicted: int = 0
+        num_correct_predicted: int = 0
+        true_num: int = 0
+        for batch in tqdm(data):
+            sample: Batch
+            for sample in batch:
+                model_output: ModelOutput = self(sample)
+                true_spans: torch.Tensor = torch.cat([sample.aspect_spans[0], sample.opinion_spans[0]], dim=0).unique(
+                    dim=0)
+                num_correct_predicted += self._count_intersection(true_spans, model_output.predicted_spans[0])
+                num_predicted += model_output.predicted_spans[0].shape[0]
+                true_num += true_spans.shape[0] - int(-1 in true_spans)
+        ratio: float = num_correct_predicted / true_num
+        logging.info(
+            f'Coverage of isolated spans: {ratio}. Extracted spans: {num_predicted}. Total correct spans: {true_num}')
+        return {
+            'Ratio': ratio,
+            'Extracted spans': num_predicted,
+            'Total correct spans': true_num
+        }
+
+    @staticmethod
+    def _count_intersection(true_spans: torch.Tensor, predicted_spans: torch.Tensor) -> int:
+        all_spans: torch.Tensor = torch.cat([true_spans, predicted_spans], dim=0)
+        uniques, counts = torch.unique(all_spans, return_counts=True, dim=0)
+        return uniques[counts > 1].shape[0]

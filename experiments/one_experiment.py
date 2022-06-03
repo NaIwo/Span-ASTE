@@ -4,6 +4,7 @@ from ASTE.aste.trainer import Trainer
 from ASTE.aste.models import BaseModel, BertBaseModel
 from ASTE.aste.tools import WandbTracker, BaseTracker
 from ASTE.aste.models import ModelMetric, ModelLoss
+from ASTE.aste.utils import to_json
 
 import os
 import logging
@@ -55,6 +56,8 @@ def run() -> None:
         dev_score = local_results[ModelMetric.NAME].triplet_metric['TripletF1']
 
     local_results: Dict = trainer.test(test_data)
+    coverage_results: Dict = trainer.check_coverage_detected_spans(test_data)
+    to_json(data_to_save=coverage_results, path=coverage_save_path)
 
     local_results[ModelMetric.NAME].to_json(path=metric_save_path)
     local_results[ModelLoss.NAME].to_json(path=loss_save_path)
@@ -63,6 +66,7 @@ def run() -> None:
 def arg_parse():
     parser = argparse.ArgumentParser(description='Information for the experiment.')
     parser.add_argument('--dataset_name', '-d', type=str, help='Name of dataset.', required=True)
+    parser.add_argument('--save_dir_name', '-s', type=str, help='Name of save directory.', required=True)
     parser.add_argument('--id', '-id', type=int, help='Experiment id.', required=True)
 
     args = parser.parse_args()
@@ -73,13 +77,17 @@ if __name__ == '__main__':
     arg = arg_parse()
     set_up_logger()
     dataset_name: str = arg.dataset_name
+    save_dir_name: str = arg.save_dir_name
     experiment_idx: int = arg.id
     data_path: str = os.path.join(os.getcwd(), 'dataset', 'data', 'ASTE_data_v2', dataset_name)
-    save_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}', f'model.pth')
+    save_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}', save_dir_name,
+                                  f'model.pth')
     metric_save_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}',
-                                         f'metrics_results_{experiment_idx}.json')
+                                         save_dir_name, f'metrics_results_{experiment_idx}.json')
     loss_save_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}',
-                                       f'losses_results_{experiment_idx}.json')
+                                       save_dir_name, f'losses_results_{experiment_idx}.json')
+    coverage_save_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results', f'{dataset_name}',
+                                           save_dir_name, f'coverage_results_{experiment_idx}.json')
 
     # RUN EXPERIMENTS
     run()

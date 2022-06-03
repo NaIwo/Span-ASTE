@@ -1,3 +1,6 @@
+import os
+import json
+from typing import Dict
 from torch import Tensor
 
 
@@ -16,3 +19,8 @@ def ignore_index(func):
 
     return ignore_and_call
 
+
+def to_json(data_to_save: Dict, path: str) -> None:
+    os.makedirs(path[:path.rfind(os.sep)], exist_ok=True)
+    with open(path, 'a') as f:
+        json.dump(data_to_save, f)

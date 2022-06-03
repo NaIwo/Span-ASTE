@@ -6,7 +6,7 @@ from ASTE.dataset.domain.sentence import Sentence
 
 import torch
 from torch.utils.data import DataLoader
-from typing import Optional, Dict, Union
+from typing import Optional, Dict, Union, Any
 import logging
 from datetime import datetime
 from tqdm import tqdm
@@ -94,21 +94,21 @@ class Trainer:
                 return True
         return False
 
+    @torch.no_grad()
     def test(self, test_data: DataLoader) -> Dict[str, Union[ModelLoss, ModelMetric]]:
         self.model.eval()
         logging.info(f'Test started...')
         test_loss = ModelLoss()
-        with torch.no_grad():
-            batch_idx: int
-            batch: Batch
-            for batch_idx, batch in enumerate(bar := tqdm(test_data)):
-                model_out: ModelOutput = self.model(batch)
-                self.model.update_metrics(model_out)
-                loss: ModelLoss = self.model.get_loss(model_out)
-                test_loss += loss.items()
-                bar.set_description(f'Test Loss: {test_loss.full_loss / (batch_idx + 1)}')
-            logging.info(f'Test loss: {test_loss / len(test_data)}')
-            metrics: ModelMetric = self.model.get_metrics_and_reset()
+        batch_idx: int
+        batch: Batch
+        for batch_idx, batch in enumerate(bar := tqdm(test_data)):
+            model_out: ModelOutput = self.model(batch)
+            self.model.update_metrics(model_out)
+            loss: ModelLoss = self.model.get_loss(model_out)
+            test_loss += loss.items()
+            bar.set_description(f'Test Loss: {test_loss.full_loss / (batch_idx + 1)}')
+        logging.info(f'Test loss: {test_loss / len(test_data)}')
+        metrics: ModelMetric = self.model.get_metrics_and_reset()
         self.pprint_metrics(metrics)
         test_loss = test_loss / len(test_data)
         return {
@@ -121,33 +121,12 @@ class Trainer:
         logging.info(f'\n{ModelMetric.NAME}\n'
                      f'{yaml.dump(metrics.__dict__, sort_keys=False, default_flow_style=False)}')
 
-    def check_coverage_detected_spans(self, data: DataLoader) -> Dict:
-        num_predicted: int = 0
-        num_correct_predicted: int = 0
-        true_num: int = 0
-        for batch in tqdm(data):
-            sample: Batch
-            for sample in batch:
-                model_output: ModelOutput = self.predict(sample)
-                true_spans: torch.Tensor = torch.cat([sample.aspect_spans[0], sample.opinion_spans[0]], dim=0).unique(
-                    dim=0)
-                num_correct_predicted += self._count_intersection(true_spans, model_output.predicted_spans[0])
-                num_predicted += model_output.predicted_spans[0].shape[0]
-                true_num += true_spans.shape[0] - int(-1 in true_spans)
-        ratio: float = num_correct_predicted / true_num
-        logging.info(
-            f'Coverage of isolated spans: {ratio}. Extracted spans: {num_predicted}. Total correct spans: {true_num}')
-        return {
-            'Ratio': ratio,
-            'Extracted spans': num_predicted,
-            'Total correct spans': true_num
-        }
+    def __getattr__(self, func_name) -> Any:
+        def wrapper(*args, **kwargs):
+            self.model.eval()
+            return getattr(self.model, func_name)(*args, **kwargs)
 
-    @staticmethod
-    def _count_intersection(true_spans: torch.Tensor, predicted_spans: torch.Tensor) -> int:
-        all_spans: torch.Tensor = torch.cat([true_spans, predicted_spans], dim=0)
-        uniques, counts = torch.unique(all_spans, return_counts=True, dim=0)
-        return uniques[counts > 1].shape[0]
+        return wrapper
 
     def save_model(self, save_path: str) -> None:
         torch.save(self.model.state_dict(), save_path)
@@ -161,15 +140,15 @@ class Trainer:
         elif isinstance(sample, Sentence):
             return self.predict_sentence(sample)
 
+    @torch.no_grad()
     def predict_batch(self, sample: Batch) -> ModelOutput:
         self.model.eval()
-        with torch.no_grad():
-            out: ModelOutput = self.model(sample)
+        out: ModelOutput = self.model(sample)
         return out
 
+    @torch.no_grad()
     def predict_sentence(self, sample: Sentence) -> ModelOutput:
         sample = Batch.from_sentence(sample)
         self.model.eval()
-        with torch.no_grad():
-            out: ModelOutput = self.model(sample)
+        out: ModelOutput = self.model(sample)
         return out
