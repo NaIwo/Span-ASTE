@@ -66,7 +66,7 @@ def run() -> None:
 def arg_parse():
     parser = argparse.ArgumentParser(description='Information for the experiment.')
     parser.add_argument('--dataset_name', '-d', type=str, help='Name of dataset.', required=True)
-    parser.add_argument('--save_dir_name', '-s', type=str, help='Name of save directory.', required=True)
+    parser.add_argument('--save_dir_name', '-s', type=str, help='Name of save directory.', default='')
     parser.add_argument('--id', '-id', type=int, help='Experiment id.', required=True)
 
     args = parser.parse_args()
