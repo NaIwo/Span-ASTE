@@ -71,8 +71,7 @@ class DiceLoss(nn.Module):
                  alpha: float = 0.0,
                  reduction: Optional[str] = "mean",
                  index_label_position=True,
-                 ignore_index: Optional[int] = None,
-                 select_index: Optional[int] = None) -> None:
+                 ignore_index: Optional[int] = None) -> None:
         super(DiceLoss, self).__init__()
 
         self.reduction = reduction
@@ -83,7 +82,6 @@ class DiceLoss(nn.Module):
         self.alpha = alpha
         self.index_label_position = index_label_position
         self.ignore_index = ignore_index
-        self.select_index = select_index
 
     @ignore_index
     def forward(self, input: Tensor, target: Tensor, *, mask: Optional[Tensor] = None) -> Tensor:

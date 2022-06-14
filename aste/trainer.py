@@ -7,6 +7,7 @@ from ASTE.dataset.domain.sentence import Sentence
 import torch
 from torch.utils.data import DataLoader
 from typing import Optional, Dict, Union, Any
+from functools import singledispatchmethod
 import logging
 from datetime import datetime
 from tqdm import tqdm
@@ -134,18 +135,18 @@ class Trainer:
     def load_model(self, save_path: str) -> None:
         self.model.load_state_dict(torch.load(save_path), strict=False)
 
+    @singledispatchmethod
     def predict(self, sample: Union[Batch, Sentence]) -> ModelOutput:
-        if isinstance(sample, Batch):
-            return self.predict_batch(sample)
-        elif isinstance(sample, Sentence):
-            return self.predict_sentence(sample)
+        raise NotImplementedError(f'Cannot make a prediction on the passed input data type: {type(sample)}')
 
+    @predict.register
     @torch.no_grad()
     def predict_batch(self, sample: Batch) -> ModelOutput:
         self.model.eval()
         out: ModelOutput = self.model(sample)
         return out
 
+    @predict.register
     @torch.no_grad()
     def predict_sentence(self, sample: Sentence) -> ModelOutput:
         sample = Batch.from_sentence(sample)

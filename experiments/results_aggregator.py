@@ -3,6 +3,8 @@ import json
 from collections import defaultdict
 from typing import Dict, DefaultDict
 
+SAVE_DIR: str = 'original_model'
+
 
 def aggregate(path: str) -> None:
     num_of_files: int = 0
@@ -34,5 +36,5 @@ if __name__ == '__main__':
     dataset_name: str
     for dataset_name in ['14lap', '14res', '15res', '16res']:
         print(dataset_name)
-        path: str = os.path.join(data_path, dataset_name)
+        path: str = os.path.join(data_path, dataset_name, SAVE_DIR)
         aggregate(path)
