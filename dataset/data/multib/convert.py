@@ -41,8 +41,6 @@ def get_triplets_from_row(row: Dict) -> List:
     sentence = row['text']
     words_map: Dict = get_words_map(sentence)
 
-    splitted_sentence = sentence.split()
-
     triplets: List = list()
     element: Dict
     for element in row['opinions']:
@@ -78,7 +76,7 @@ def get_words_map(sentence: str) -> Dict:
         words_map[letter_idx] = word_idx
         if letter == ' ':
             word_idx += 1
-    words_map[letter_idx+1] = words_map[letter_idx]
+    words_map[letter_idx + 1] = words_map[letter_idx]
     return words_map
 
 
