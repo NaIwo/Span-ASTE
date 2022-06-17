@@ -4,6 +4,8 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import List, Dict, DefaultDict, Tuple
 
+from ASTE.aste.utils import to_json
+
 SEP: str = '\\'
 
 ERRORS: DefaultDict = defaultdict(int)
@@ -19,7 +21,7 @@ def convert_dataset() -> None:
 
 
 def convert_sentences(data: List, data_path: str) -> None:
-    save_path: str = data_path.replace('.json', '_bio.txt')
+    save_path: str = data_path.replace('.json', '_bio.json')
     results: List = list()
 
     row: Dict
@@ -62,8 +64,8 @@ def convert_sentences(data: List, data_path: str) -> None:
             }
             sentence['triples'].append(temp)
         results.append(sentence)
-    with open(save_path, 'w', encoding='utf-8') as file:
-        file.write(str(results))
+
+    to_json(results, save_path, mode='w')
 
 
 def get_triplets_from_row(row: Dict) -> List:

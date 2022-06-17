@@ -1,6 +1,6 @@
 import os
 import json
-from typing import Dict
+from typing import Dict, List, Union
 from torch import Tensor
 
 
@@ -20,7 +20,7 @@ def ignore_index(func):
     return ignore_and_call
 
 
-def to_json(data_to_save: Dict, path: str, mode: str = 'a') -> None:
+def to_json(data_to_save: Union[Dict, List], path: str, mode: str = 'a') -> None:
     os.makedirs(path[:path.rfind(os.sep)], exist_ok=True)
     with open(path, mode=mode) as f:
         json.dump(data_to_save, f)
