@@ -5,7 +5,7 @@ import numpy as np
 
 
 def get_label_from_sentence(sentence: Sentence) -> np.ndarray:
-    chunk: np.ndarray = np.full(shape=sentence.encoded_sentence_length, fill_value=int(ChunkCode.NOT_SPLIT))
+    chunk: np.ndarray = np.full(shape=sentence.encoded_sentence_length, fill_value=int(ChunkCode.NOT_RELEVANT))
 
     def fill_chunk(start_idx: int, end_idx: int):
         chunk[start_idx:end_idx] = ChunkCode.NOT_SPLIT
