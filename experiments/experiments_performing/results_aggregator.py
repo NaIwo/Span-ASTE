@@ -5,7 +5,7 @@ from typing import Dict, DefaultDict
 
 from ASTE.aste.utils import to_json
 
-SAVE_DIR: str = 'original_model'
+SAVE_DIR: str = 'span_based'
 
 
 def aggregate(path: str) -> None:
@@ -50,7 +50,7 @@ if __name__ == '__main__':
     data_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results')
 
     dataset_name: str
-    for dataset_name in ['14lap', '14res', '15res', '16res']:
+    for dataset_name in ['ca', 'eu']:
         print(dataset_name)
         path: str = os.path.join(data_path, dataset_name, SAVE_DIR)
         aggregate(path)
