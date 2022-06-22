@@ -35,9 +35,11 @@ if __name__ == '__main__':
     test_data = dataset_reader.load('test.txt')
 
     # Get Model. You can create your own definition or update existing one.
+    # BertBase model is our provided implementation which obtain best results so far.
     model: BaseModel = BertBaseModel()
 
     # Setup experiment tracker. Default is BaseTracker (it means: do not track the experiment.)
+    # If you want to use other trackers - implement its definition in the file ./aste/tools/trackers.py.
     tracker: BaseTracker = WandbTracker(project="project_name", entity="entity")
     # If you want set experiment name, you can init tracker by hand as below. If don't, tracker will be init by Trainer.
     tracker.init(name=dataset_name)
@@ -67,7 +69,9 @@ if __name__ == '__main__':
     save_path_json: str = os.path.join(os.getcwd(), 'results', 'name', 'results.json')
     results[ModelMetric.NAME].to_json(path=save_path_json)
 
-    # If you want to feed the model with your own sentence. You should create this sentence, and call predict:
+    # If you want to feed the model with your own sentence.
+    # You should include the correct tokenization of the sentence (we are not handling that at the moment)
+    # You should create this sentence, and call predict:
     sentence = Sentence('This OS is so fast !!')
     prediction: ModelOutput = trainer.predict(sentence)
     # You can also save the results to file

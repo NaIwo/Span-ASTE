@@ -1,11 +1,12 @@
 from .sentence import Sentence, Triplet
 from .const import ChunkCode
+from ASTE.utils import config
 
 import numpy as np
 
 
 def get_label_from_sentence(sentence: Sentence) -> np.ndarray:
-    chunk: np.ndarray = np.full(shape=sentence.encoded_sentence_length, fill_value=int(ChunkCode.NOT_RELEVANT))
+    chunk: np.ndarray = np.full(shape=sentence.encoded_sentence_length, fill_value=_get_fill_value())
 
     def fill_chunk(start_idx: int, end_idx: int):
         chunk[start_idx:end_idx] = ChunkCode.NOT_SPLIT
@@ -24,3 +25,7 @@ def get_label_from_sentence(sentence: Sentence) -> np.ndarray:
     chunk[chunk.shape[0] - sentence.encoder.offset:] = ChunkCode.NOT_RELEVANT
     chunk[:sentence.encoder.offset] = ChunkCode.NOT_RELEVANT
     return chunk
+
+
+def _get_fill_value() -> int:
+    return ChunkCode.NOT_RELEVANT if config['model']['chunker']['mode'].lower() == 'soft' else ChunkCode.NOT_SPLIT

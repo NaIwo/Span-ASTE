@@ -18,12 +18,20 @@ class ChunkerModel(BaseModel):
         self.metrics: Metric = Metric(name='Chunker', metrics=get_selected_metrics(multiclass=False),
                                       ignore_index=ChunkCode.NOT_RELEVANT).to(config['general']['device'])
 
+        self.mode: int = self._get_mode()
+
         self.dropout = torch.nn.Dropout(0.1)
         self.linear_layer_1 = torch.nn.Linear(input_dim, 400)
         self.linear_layer_2 = torch.nn.Linear(400, 100)
         self.linear_layer_3 = torch.nn.Linear(100, 10)
         self.final_layer = torch.nn.Linear(10, 2)
         self.softmax = torch.nn.Softmax(dim=-1)
+
+    @staticmethod
+    def _get_mode() -> int:
+        assert config['model']['chunker']['mode'].lower() in (
+            'soft', 'hard'), f"Incorrect chunker operation mode: {config['model']['chunker']['mode']}"
+        return 1 if config['model']['chunker']['mode'].lower() == 'soft' else 0
 
     def forward(self, data: torch.Tensor) -> torch.Tensor:
         layer: torch.nn.Linear
@@ -80,8 +88,7 @@ class ChunkerModel(BaseModel):
         true_label_sum: torch.Tensor = torch.sum(chunk_label, dim=-1)
         pred_label_sum: torch.Tensor = torch.sum(predictions[..., 1], dim=-1)
         diff: torch.Tensor = torch.abs(pred_label_sum - true_label_sum).type(torch.float)
-        return ModelLoss(
-            chunker_loss=loss_ignore + self.loss_lambda * torch.mean(diff))
+        return ModelLoss(chunker_loss=loss_ignore + self.loss_lambda * torch.mean(diff) * self.mode)
 
     def update_metrics(self, model_out: ModelOutput) -> None:
         self.metrics(

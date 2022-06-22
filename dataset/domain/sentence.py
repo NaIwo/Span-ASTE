@@ -15,7 +15,7 @@ class Sentence:
         splitted_sentence: List = raw_sentence.split(Sentence.SEP)
         self.sentence: str = splitted_sentence[0]
         self.triplets: List[Triplet] = []
-        # If data wit labels
+        # If data with labels
         if len(splitted_sentence) == 2:
             triplets_info: List[Tuple] = literal_eval(splitted_sentence[1])
             self.triplets = [Triplet.from_triplet_info(triplet_info, self.sentence) for triplet_info in triplets_info]
