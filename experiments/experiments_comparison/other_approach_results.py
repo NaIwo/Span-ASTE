@@ -57,6 +57,13 @@ sambert: Dict = {'info': 'https://openreview.net/pdf?id=Z9vIuaFlIXx',
                  '15res': {'TripletPrecision': 65.12, 'TripletRecall': 63.51, 'TripletF1': 64.3},
                  '16res': {'TripletPrecision': 68.01, 'TripletRecall': 75.44, 'TripletF1': 71.53}}
 
+# https://arxiv.org/pdf/2204.12674.pdf, ASTE-Data-V2-dataset
+SBC: Dict = {'info': 'https://arxiv.org/pdf/2204.12674.pdf',
+                 '14lap': {'TripletPrecision': 63.64, 'TripletRecall': 61.80, 'TripletF1': 62.71},
+                 '14res': {'TripletPrecision': 77.09, 'TripletRecall': 70.99, 'TripletF1': 73.92},
+                 '15res': {'TripletPrecision': 63.00, 'TripletRecall': 64.95, 'TripletF1': 63.96},
+                 '16res': {'TripletPrecision': 75.20, 'TripletRecall': 71.40, 'TripletF1': 73.25}}
+
 OTHER_RESULTS: Dict = {
     'gts': gts,
     'span_based': span_based,
@@ -66,4 +73,5 @@ OTHER_RESULTS: Dict = {
     'jet_o': jet_o,
     'more_fine_grained': more_fine_grained,
     'sambert': sambert,
+    'SBC': SBC,
 }
