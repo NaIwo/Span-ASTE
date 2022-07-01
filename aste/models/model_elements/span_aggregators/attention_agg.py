@@ -11,7 +11,7 @@ class AttentionAggregator(BaseAggregator, Module):
         BaseAggregator.__init__(self, input_dim=input_dim, model_name=model_name)
         self._out_dim: int = input_dim
         self.query_linear = torch.nn.Linear(input_dim, input_dim)
-        self.softmax = torch.nn.Softmax(dim=0)
+        self.softmax = torch.nn.Softmax(dim=1)
 
     @property
     def output_dim(self):
