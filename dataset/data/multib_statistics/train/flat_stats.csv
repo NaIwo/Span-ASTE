@@ -1,0 +1,25 @@
+,ca,eu
+Number of sentences,861.0,660.0
+Mean sentence length,16.9187,11.8136
+Number of opinion phrases,1576.0,1192.0
+Number of aspect phrases,1371.0,963.0
+Number of triplets,1694.0,1282.0
+Mean length of chunk (with encoder),5.7284,5.9067
+Mean length of chunk (words),2.9596,2.2738
+Mean length of opinion phrases (with encoder),3.5279,3.8909
+Mean length of opinion phrases (words),2.434,2.0906
+Mean length of aspect phrases (with encoder),3.345,2.2606
+Mean length of aspect phrases (words),2.4406,1.4278
+Number of positive sentiment,1081.0,1049.0
+Number of neutral sentiment,0.0,0.0
+Number of negative sentiment,613.0,233.0
+Number of one-to-many relations (opinions),87.0,62.0
+Number of one-to-many relations (aspects),269.0,261.0
+Number of opinions with length = 1,563.0,476.0
+Number of aspects with length = 1,424.0,725.0
+Number of opinions with length > 1,1013.0,716.0
+Number of aspects with length > 1,947.0,238.0
+Number of triplets where length of each span = 1,236.0,409.0
+Number of triplets where aspect span length > 1 and opinion span length = 1,373.0,100.0
+Number of triplets where opinion span length > 1 and aspect span length = 1,278.0,569.0
+Number of triplets where at least one span length > 1,1458.0,873.0

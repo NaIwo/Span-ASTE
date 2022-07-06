@@ -1,43 +1,67 @@
-from .domain import Sentence, get_label_from_sentence
+from .domain import Sentence, get_chunk_label_from_sentence
 from ASTE.utils import config
 from ASTE.dataset.domain.const import ChunkCode
 from ASTE.dataset.encoders import BaseEncoder, BertEncoder
 
 import torch
 import numpy as np
+from tqdm import tqdm
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
-from typing import List, Dict
+from typing import List, Union
 import os
 from collections import Iterable
 
 
 class ASTEDataset(Dataset):
-    def __init__(self, data_path: str, encoder):
+    def __init__(self, data_path: Union[str, List[str]], encoder: BaseEncoder = BertEncoder()):
         self.sentences: List[Sentence] = list()
 
+        if isinstance(data_path, str):
+            data_path = [data_path]
+
+        data_p: str
+        for data_p in data_path:
+            self.add_sentences(data_p, encoder)
+
+    def add_sentences(self, data_path, encoder):
         with open(data_path, 'r') as file:
             line: str
-            for line in file.readlines():
-                sentence = Sentence(line.strip(), encoder)
+            for line in tqdm(file.readlines(), desc=f'Loading data from path: {data_path}'):
+                sentence = Sentence(line, encoder)
                 self.sentences.append(sentence)
 
     def __len__(self) -> int:
         return len(self.sentences)
 
     def __getitem__(self, idx):
-        return {
-            'sentence': self.sentences[idx],
-        }
+        return self.sentences[idx]
+
+    def __iter__(self):
+        self.num: int = -1
+        return self
+
+    def __next__(self):
+        self.num += 1
+        if self.num >= len(self):
+            raise StopIteration
+        return self.sentences[self.num]
 
 
 class DatasetLoader:
     def __init__(self, data_path: str):
         self.data_path: str = data_path
 
-    def load(self, name: str, encoder: BaseEncoder = BertEncoder()) -> DataLoader:
-        dataset: ASTEDataset = ASTEDataset(os.path.join(self.data_path, name), encoder)
+    def load(self, name: Union[str, List[str]], encoder: BaseEncoder = BertEncoder()) -> DataLoader:
+        if isinstance(name, str):
+            name = [name]
+
+        paths: List = list()
+        data_name: str
+        for data_name in name:
+            paths.append(os.path.join(self.data_path, data_name))
+        dataset: ASTEDataset = ASTEDataset(paths, encoder)
         return DataLoader(dataset, batch_size=config['dataset']['batch-size'], shuffle=True, prefetch_factor=2,
                           collate_fn=self._collate_fn)
 
@@ -49,15 +73,15 @@ class DatasetLoader:
         chunk_labels: List = list()
         sub_words_masks: List = list()
         lengths: List = list()
-        sample: Dict
+        sample: Sentence
         for sample in batch:
-            sentence_objs.append(sample["sentence"])
-            encoded_sentences.append(torch.tensor(sample["sentence"].encoded_sentence))
-            aspect_spans.append(torch.tensor(sample["sentence"].get_aspect_spans()))
-            opinion_spans.append(torch.tensor(sample["sentence"].get_opinion_spans()))
-            chunk_labels.append(torch.tensor(get_label_from_sentence(sample['sentence'])))
-            sub_words_masks.append(torch.tensor(sample["sentence"].sub_words_mask))
-            lengths.append(sample["sentence"].encoded_sentence_length)
+            sentence_objs.append(sample)
+            encoded_sentences.append(torch.tensor(sample.encoded_sentence))
+            aspect_spans.append(torch.tensor(sample.get_aspect_spans()))
+            opinion_spans.append(torch.tensor(sample.get_opinion_spans()))
+            chunk_labels.append(torch.tensor(get_chunk_label_from_sentence(sample)))
+            sub_words_masks.append(torch.tensor(sample.sub_words_mask))
+            lengths.append(sample.encoded_sentence_length)
 
         lengths: torch.Tensor = torch.tensor(lengths, dtype=torch.int64)
         sentence_batch = pad_sequence(encoded_sentences, padding_value=0, batch_first=True)

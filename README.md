@@ -17,6 +17,10 @@ Embedding of words are obtained thanks to BERT and embedding of phrases are aggr
 pip install -r requirements.txt
 ```
 
+### Dataset statistics
+You can compute dataset statistics to examine your data.
+One way to do this is to use our implementation. A full example is available in [dataset_statistics.py](./dataset_statistics.py)
+
 #### Dataset preparation
 ```python
 import os
@@ -35,7 +39,7 @@ test_data = dataset_reader.load('test.txt')
 ```
 #### Experiments tracker
 You can keep track of your experiments. We don't do that by default. 
-If you want to track them, see the example in the file: [examples.py](./examples.py), 
+If you want to track them, see the example in the file: [model_examples.py](./model_examples.py), 
 where we discuss how to add 'experiments tracker'.
 
 #### Setup trainer
@@ -91,7 +95,7 @@ prediction: ModelOutput = trainer.predict(sentence)
 prediction.save('sentence_result.txt')
 ```
 
-You can find usage examples in the file [examples.py](./examples.py)
+You can find usage examples in the file [model_examples.py](./model_examples.py)
 
 ### Configuration
 You can adapt model configuration for your sepecific task in [config](./config.yml) file.

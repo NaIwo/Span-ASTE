@@ -5,7 +5,7 @@ from ASTE.utils import config
 import numpy as np
 
 
-def get_label_from_sentence(sentence: Sentence) -> np.ndarray:
+def get_chunk_label_from_sentence(sentence: Sentence) -> np.ndarray:
     chunk: np.ndarray = np.full(shape=sentence.encoded_sentence_length, fill_value=_get_fill_value())
 
     def fill_chunk(start_idx: int, end_idx: int):

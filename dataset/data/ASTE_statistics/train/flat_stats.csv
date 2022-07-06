@@ -1,0 +1,25 @@
+,14lap,14res,15res,16res
+Number of sentences,906.0,1266.0,605.0,857.0
+Mean sentence length,19.1545,17.3081,14.8033,15.1529
+Number of opinion phrases,1258.0,2067.0,929.0,1294.0
+Number of aspect phrases,1272.0,2042.0,862.0,1198.0
+Number of triplets,1460.0,2338.0,1013.0,1394.0
+Mean length of chunk (with encoder),4.3216,3.4891,3.3168,3.4662
+Mean length of chunk (words),3.7113,2.8965,2.6838,2.8188
+Mean length of opinion phrases (with encoder),1.1924,1.1335,1.1227,1.1383
+Mean length of opinion phrases (words),1.1645,1.1161,1.1109,1.1229
+Mean length of aspect phrases (with encoder),1.441,1.3668,1.4397,1.4332
+Mean length of aspect phrases (words),1.3514,1.24,1.2575,1.2646
+Number of positive sentiment,817.0,1692.0,783.0,1015.0
+Number of neutral sentiment,126.0,166.0,25.0,50.0
+Number of negative sentiment,517.0,480.0,205.0,329.0
+Number of one-to-many relations (opinions),164.0,211.0,60.0,78.0
+Number of one-to-many relations (aspects),169.0,250.0,128.0,169.0
+Number of opinions with length = 1,1051.0,1827.0,826.0,1135.0
+Number of aspects with length = 1,825.0,1552.0,640.0,881.0
+Number of opinions with length > 1,207.0,240.0,103.0,159.0
+Number of aspects with length > 1,447.0,490.0,222.0,317.0
+Number of triplets where length of each span = 1,824.0,1586.0,678.0,918.0
+Number of triplets where aspect span length > 1 and opinion span length = 1,408.0,493.0,228.0,312.0
+Number of triplets where opinion span length > 1 and aspect span length = 1,139.0,192.0,77.0,118.0
+Number of triplets where at least one span length > 1,636.0,752.0,335.0,476.0

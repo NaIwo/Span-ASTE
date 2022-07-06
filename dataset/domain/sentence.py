@@ -12,7 +12,7 @@ class Sentence:
 
     def __init__(self, raw_sentence: str, encoder: BaseEncoder = BertEncoder()):
         self.encoder: BaseEncoder = encoder
-        splitted_sentence: List = raw_sentence.split(Sentence.SEP)
+        splitted_sentence: List = raw_sentence.strip().split(Sentence.SEP)
         self.sentence: str = splitted_sentence[0]
         self.triplets: List[Triplet] = []
         # If data with labels
