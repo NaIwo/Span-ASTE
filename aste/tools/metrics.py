@@ -16,8 +16,8 @@ class Metric(MetricCollection):
         super().__init__(*args, **kwargs)
 
     @ignore_index
-    def forward(self, preds, target):
-        super(Metric, self).forward(preds, target)
+    def forward(self, preds, target, *args, **kwargs):
+        super(Metric, self).forward(preds, target, *args, **kwargs)
 
     def compute(self):
         computed: Dict = super(Metric, self).compute()
@@ -34,13 +34,13 @@ class TripletMetric(TorchMetric):
         self.add_state("total_predicted", default=torch.tensor(0), dist_reduce_fx="sum")
         self.add_state("total_target", default=torch.tensor(0), dist_reduce_fx="sum")
 
-    def update(self, preds: Tensor, target: Tensor) -> None:
+    def update(self, preds: Tensor, target_matrix: Tensor, full_target_count: int) -> None:
         preds = preds.unique(dim=0)
-        target = target.unique(dim=0)
+        target_matrix = target_matrix.unique(dim=0)
 
-        self.correct += self._count_correct_num(preds, target)
+        self.correct += self._count_correct_num(preds, target_matrix)
         self.total_predicted += preds.shape[0]
-        self.total_target += target.shape[0]
+        self.total_target += full_target_count
 
     @staticmethod
     def _count_correct_num(preds: Tensor, target: Tensor) -> int:

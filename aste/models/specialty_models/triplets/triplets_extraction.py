@@ -72,12 +72,18 @@ class TripletExtractorModel(BaseModel):
     def update_metrics(self, model_out: ModelOutput) -> None:
         true_labels: torch.Tensor = self.construct_matrix_labels(model_out.batch, tuple(model_out.predicted_spans))
         true_triplets: torch.Tensor = self.get_triplets_from_matrix(true_labels)
+        total_correct_count: int = self.get_total_correct_triplets_count(model_out.batch)
         predicted_labels: torch.Tensor = torch.argmax(model_out.triplet_results, dim=-1)
         predicted_labels = torch.where(true_labels == ASTELabels.NOT_RELEVANT, true_labels, predicted_labels)
         predicted_triplets: torch.Tensor = self.get_triplets_from_matrix(predicted_labels)
 
         self.independent_metrics(predicted_labels.view([-1]), true_labels.view([-1]))
-        self.final_metrics(predicted_triplets, true_triplets)
+        self.final_metrics(predicted_triplets, true_triplets, full_target_count=total_correct_count)
+
+    @staticmethod
+    def get_total_correct_triplets_count(batch: Batch) -> int:
+        sample: Batch
+        return sum([len(sample.sentence_obj[0].triplets) for sample in batch])
 
     @staticmethod
     @lru_cache(maxsize=None)

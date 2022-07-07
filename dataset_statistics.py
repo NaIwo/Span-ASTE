@@ -1,4 +1,4 @@
-from ASTE.dataset.data.statistics import DatasetStatistic, StatisticComparison
+from ASTE.dataset.data.statistics import DatasetStatistics, StatisticComparator
 from dataset.reader import ASTEDataset
 
 from os import getcwd
@@ -21,7 +21,7 @@ def compute():
         # can be found in 'ASTE/dataset/statistics/statistics_utils/defaults.py' file
 
         # Now, only one thing left to do: pass dataset and call 'compute'
-        dataset_stats = DatasetStatistic(dataset=aste_dataset)
+        dataset_stats = DatasetStatistics(dataset=aste_dataset)
         dataset_stats.compute()
 
         # If you want, you can pretty print the results
@@ -42,7 +42,7 @@ def compute():
 
 
 def save_stats():
-    stats: StatisticComparison
+    stats: StatisticComparator
     for stats, name in zip([train_stats_comp, dev_stats_comp, test_stats_comp], ['train', 'dev', 'test']):
         # You can save the results to csv (or json by calling 'to_json').
         # NOTE: pass path to directory, without file name.
@@ -50,14 +50,12 @@ def save_stats():
 
 
 if __name__ == '__main__':
-
-    #### ASTE ####
-
     # You can compare statistics in different level of depth.
     # In this case we keep stats for train, dev and test sets separately
-    train_stats_comp = StatisticComparison()
-    dev_stats_comp = StatisticComparison()
-    test_stats_comp = StatisticComparison()
+
+    train_stats_comp = StatisticComparator()
+    dev_stats_comp = StatisticComparator()
+    test_stats_comp = StatisticComparator()
 
     for dataset in ['14lap', '14res', '15res', '16res']:
         data_path: str = join(getcwd(), 'dataset', 'data', 'ASTE_data_v2', dataset)
@@ -66,11 +64,11 @@ if __name__ == '__main__':
     save_path: str = join(getcwd(), 'dataset', 'data', 'ASTE_statistics')
     save_stats()
 
-    ### MULTIB ###
+    # MULTIB #
 
-    train_stats_comp = StatisticComparison()
-    dev_stats_comp = StatisticComparison()
-    test_stats_comp = StatisticComparison()
+    train_stats_comp = StatisticComparator()
+    dev_stats_comp = StatisticComparator()
+    test_stats_comp = StatisticComparator()
 
     for dataset in ['ca', 'eu']:
         data_path: str = join(getcwd(), 'dataset', 'data', 'multib', dataset)

@@ -15,8 +15,14 @@ from .functions import (
     specific_sentiment_count,
     one_to_many_count,
     specific_span_word_length_count,
-    triplet_word_length_counts,
-    specific_phrase_count
+    triplet_word_length_count,
+    specific_phrase_count,
+
+    bad_pairing_count,
+    bad_sentiment_count,
+    opposite_sentiment_count,
+    not_included_words,
+    over_included_words
 )
 
 default_statistics_func: Dict = {
@@ -49,19 +55,19 @@ default_statistics_func: Dict = {
         specific_span_word_length_count, span_source='aspect_span',
         func=lambda el: len(el) > 1),
     'Number of triplets where length of each span = 1': partial(
-        triplet_word_length_counts,
+        triplet_word_length_count,
         aspect_func=lambda el: len(el) == 1,
         opinion_func=lambda el: len(el) == 1),
     'Number of triplets where aspect span length > 1 and opinion span length = 1': partial(
-        triplet_word_length_counts,
+        triplet_word_length_count,
         aspect_func=lambda el: len(el) > 1,
         opinion_func=lambda el: len(el) == 1),
     'Number of triplets where opinion span length > 1 and aspect span length = 1': partial(
-        triplet_word_length_counts,
+        triplet_word_length_count,
         aspect_func=lambda el: len(el) == 1,
         opinion_func=lambda el: len(el) > 1),
     'Number of triplets where at least one span length > 1': partial(
-        triplet_word_length_counts,
+        triplet_word_length_count,
         aspect_func=lambda el: len(el) > 1,
         opinion_func=lambda el: len(el) > 1,
         op='or'),
@@ -71,4 +77,15 @@ default_phrases_func: Dict = {
     'Number of specific phrases': specific_phrase_count,
     'Number of specific phrases in aspect span': partial(specific_phrase_count, span_source='aspect_span'),
     'Number of specific phrases in opinion span': partial(specific_phrase_count, span_source='opinion_span'),
+}
+
+default_results_func: Dict = {
+    # if phrases are partially good extracted - prediction intersect with labels ends up with at least one word
+    'Number of bad pairing': bad_pairing_count,
+    'Bad sentiment': bad_sentiment_count,
+    'Bad (opposite) sentiment': opposite_sentiment_count
+}
+default_advanced_result_stats_func: Dict = {
+    'Not included words': not_included_words,
+    'Over included words': over_included_words,
 }

@@ -5,7 +5,8 @@ from typing import Dict, DefaultDict
 
 from ASTE.aste.utils import to_json
 
-SAVE_DIR: str = 'hard'
+SAVE_DIR: str = 'chunk_aste_hard'
+AGG_DIR: str = 'attention_aggregation'
 
 
 def aggregate(path: str) -> None:
@@ -47,10 +48,10 @@ def aggregate(path: str) -> None:
 
 
 if __name__ == '__main__':
-    data_path: str = os.path.join(os.getcwd(), 'experiments', 'experiment_results')
+    data_path: str = os.path.join('..', 'experiment_results', AGG_DIR)
 
     dataset_name: str
-    for dataset_name in ['14lap', '14res', '15res', '16res', 'ca', 'eu']:
+    for dataset_name in ['14lap', '14res']:
         print(dataset_name)
         path: str = os.path.join(data_path, dataset_name, SAVE_DIR)
         aggregate(path)

@@ -17,7 +17,7 @@ Embedding of words are obtained thanks to BERT and embedding of phrases are aggr
 pip install -r requirements.txt
 ```
 
-### Dataset statistics
+#### Dataset statistics
 You can compute dataset statistics to examine your data.
 One way to do this is to use our implementation. A full example is available in [dataset_statistics.py](./dataset_statistics.py)
 

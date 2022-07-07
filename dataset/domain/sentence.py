@@ -1,7 +1,7 @@
 from ASTE.dataset.encoders import BaseEncoder, BertEncoder
 
 from ast import literal_eval
-from typing import List, Tuple, TypeVar
+from typing import List, Tuple, TypeVar, Optional
 
 S = TypeVar('S', bound='Span')
 T = TypeVar('T', bound='Triplet')
@@ -12,6 +12,7 @@ class Sentence:
 
     def __init__(self, raw_sentence: str, encoder: BaseEncoder = BertEncoder()):
         self.encoder: BaseEncoder = encoder
+        self.raw_line: str = raw_sentence
         splitted_sentence: List = raw_sentence.strip().split(Sentence.SEP)
         self.sentence: str = splitted_sentence[0]
         self.triplets: List[Triplet] = []
@@ -56,7 +57,17 @@ class Sentence:
         return self.encoder.offset + idx + sum(self.sub_words_lengths[:idx])
 
     def get_index_before_encoding(self, idx: int) -> int:
-        return idx - self.encoder.offset - sum(self.sub_words_lengths[:idx])
+        return sum(self.sub_words_mask[:idx])
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Sentence):
+            raise NotImplemented
+
+        return (self.triplets == other.triplets) and (self.sentence == other.sentence) and (
+                self.encoded_sentence == other.encoded_sentence)
+
+    def __hash__(self):
+        return hash(self.raw_line)
 
 
 class Span:
@@ -82,6 +93,49 @@ class Span:
     def __repr__(self):
         return self.__str__()
 
+    def __eq__(self, other) -> bool:
+        return (self.start_idx == other.start_idx) and (self.end_idx == other.end_idx) and (
+                self.span_words == other.span_words)
+
+    def __lt__(self, other):
+        if self.start_idx != other.start_idx:
+            return self.start_idx < other.start_idx
+        else:
+            return self.end_idx < other.end_idx
+
+    def __gt__(self, other):
+        if self.start_idx != other.start_idx:
+            return self.start_idx > other.start_idx
+        else:
+            return self.end_idx > other.end_idx
+
+    def __bool__(self) -> bool:
+        return (self.start_idx != -1) and (self.end_idx != -1) and (self.span_words != [])
+
+    def intersect(self, other) -> S:
+        start_idx: int = max(self.start_idx, other.start_idx)
+        end_idx: int = min(self.end_idx, other.end_idx)
+        if end_idx < start_idx:
+            return Span(start_idx=-1, end_idx=-1, words=[])
+        else:
+            span_words: List = self._get_intersected_words(other, start_idx, end_idx)
+
+            return Span(start_idx=start_idx, end_idx=end_idx, words=span_words)
+
+    def _get_intersected_words(self, other, start_idx, end_idx) -> List:
+        span_words: List
+        if start_idx == self.start_idx:
+            if end_idx == self.end_idx:
+                span_words = self.span_words[:]
+            else:
+                span_words = self.span_words[:-(self.end_idx - end_idx)]
+        else:
+            if end_idx == other.end_idx:
+                span_words = other.span_words[:]
+            else:
+                span_words = other.span_words[:-(other.end_idx - end_idx)]
+        return span_words
+
 
 class Triplet:
     def __init__(self, aspect_span: Span, opinion_span: Span, sentiment: str):
@@ -106,3 +160,29 @@ class Triplet:
 
     def __repr__(self):
         return self.__str__()
+
+    def __eq__(self, other) -> bool:
+        return (self.aspect_span == other.aspect_span) and (self.opinion_span == self.opinion_span) and (
+                self.sentiment == other.sentiment)
+
+    def __lt__(self, other):
+        if self.aspect_span != other.aspect_span:
+            return self.aspect_span < other.aspect_span
+        else:
+            return self.opinion_span < other.opinion_span
+
+    def __gt__(self, other):
+        if self.aspect_span != other.aspect_span:
+            return self.aspect_span > other.aspect_span
+        else:
+            return self.opinion_span > other.opinion_span
+
+    def __bool__(self) -> bool:
+        return bool(self.aspect_span) and bool(self.opinion_span)
+
+    def intersect(self, other) -> Optional[T]:
+        return Triplet(
+            aspect_span=self.aspect_span.intersect(other.aspect_span),
+            opinion_span=self.opinion_span.intersect(other.opinion_span),
+            sentiment=None if self.sentiment != other.sentiment else self.sentiment
+        )

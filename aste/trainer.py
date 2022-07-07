@@ -1,18 +1,19 @@
 from ASTE.utils import config
 from .tools import Memory, BaseTracker
 from ASTE.dataset.reader import Batch
-from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
 from ASTE.dataset.domain.sentence import Sentence
+from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
+
 
 import torch
 from torch.utils.data import DataLoader
-from typing import Optional, Dict, Union, Any
-from functools import singledispatchmethod
-import logging
-from datetime import datetime
-from tqdm import tqdm
 import os
 import yaml
+import logging
+from tqdm import tqdm
+from datetime import datetime
+from functools import singledispatchmethod
+from typing import Optional, Dict, Union, Any, List
 
 
 class Trainer:
@@ -136,8 +137,18 @@ class Trainer:
         self.model.load_state_dict(torch.load(save_path), strict=False)
 
     @singledispatchmethod
-    def predict(self, sample: Union[Batch, Sentence]) -> ModelOutput:
+    def predict(self, sample: Union[Batch, Sentence]) -> Union[ModelOutput, List[ModelOutput]]:
         raise NotImplementedError(f'Cannot make a prediction on the passed input data type: {type(sample)}')
+
+    @predict.register
+    @torch.no_grad()
+    def predict_dataset(self, sample: DataLoader) -> List[ModelOutput]:
+        out: List[ModelOutput] = list()
+        batch: Batch
+        for batch in (tqdm(sample, desc=f'Model is running...')):
+            model_out: ModelOutput = self.predict_batch(batch)
+            out.append(model_out)
+        return out
 
     @predict.register
     @torch.no_grad()

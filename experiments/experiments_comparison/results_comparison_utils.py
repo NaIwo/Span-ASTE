@@ -11,11 +11,12 @@ from .other_approach_results import OTHER_RESULTS
 from ASTE.aste.utils import to_json
 
 datasets: List = ['14lap', '14res', '15res', '16res', 'ca', 'eu']
+AGG_DIR: str = 'sum_aggregation'
 
 score_results_file_name: str = 'final_results.json'
 coverage_results_file_name: str = 'final_coverage_results.json'
 
-results_path: str = join(os.path.dirname(os.path.abspath(__file__)), '..', 'experiment_results')
+results_path: str = join(os.path.dirname(os.path.abspath(__file__)), '..', 'experiment_results', AGG_DIR)
 
 
 def process(results_file_name, add_other_results: bool = False) -> Dict:

@@ -1,9 +1,9 @@
 import torch
 from torch import Tensor
-from typing import List, Dict, TypeVar, Optional, Tuple
-from functools import lru_cache
-import json
 import os
+import json
+from functools import lru_cache
+from typing import List, Dict, TypeVar, Optional, Tuple
 
 from ASTE.utils import config
 from ASTE.dataset.reader import Batch
@@ -11,6 +11,7 @@ from ASTE.dataset.domain.const import ASTELabels
 
 ML = TypeVar('ML', bound='ModelLoss')
 MM = TypeVar('MM', bound='ModelMetric')
+MO = TypeVar('MO', bound='ModelOutput')
 
 
 class ModelOutput:
@@ -30,12 +31,17 @@ class ModelOutput:
     def __str__(self):
         return str(self.result)
 
-    def save(self, path: str) -> None:
-        os.makedirs(path[:path.rfind(os.sep)], exist_ok=True)
+    @classmethod
+    def save_list_of_outputs(cls, results: List[MO], save_path: str) -> None:
+        res: MO
+        [res.save(save_path) for res in results]
+
+    def save(self, save_path: str) -> None:
+        os.makedirs(save_path[:save_path.rfind(os.sep)], exist_ok=True)
         triplets: List = self._triplet_results_for_save()
         idx: int
         triplet: List
-        with open(path, 'a') as f:
+        with open(save_path, 'a') as f:
             for idx, triplet in enumerate(triplets):
                 line: str = f'{self.batch.sentence_obj[idx].sentence}{self.batch.sentence_obj[idx].SEP}{str(triplet)}\n'
                 f.write(line)
