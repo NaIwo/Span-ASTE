@@ -205,21 +205,21 @@ class ResultInvestigator:
         true: Sentence
         pred: Sentence
         for true, pred in tqdm(zip(self.original_data, self.model_prediction), desc=f'Result investigation...'):
-            self.process_sentences(true, pred)
-            self.extensive_processing(true, pred)
+            self.process_sentence(true, pred)
+            self.process_sentence_advanced(true, pred)
 
         statistic_name: str
         results: List
         for statistic_name, results in self.advanced_result_stats.items():
             self.advanced_result_stats[statistic_name] = Counter(results)
 
-    def process_sentences(self, true: Sentence, pred: Sentence) -> None:
+    def process_sentence(self, true: Sentence, pred: Sentence) -> None:
         statistic_name: str
         func: Callable
         for statistic_name, func in self.result_stats_func.items():
             self.result_stats[statistic_name] += func(true, pred)
 
-    def extensive_processing(self, true: Sentence, pred: Sentence) -> None:
+    def process_sentence_advanced(self, true: Sentence, pred: Sentence) -> None:
         statistic_name: str
         func: Callable
         for statistic_name, func in self.advanced_result_stats_func.items():

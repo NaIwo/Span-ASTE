@@ -20,6 +20,8 @@ pip install -r requirements.txt
 #### Dataset statistics
 You can compute dataset statistics to examine your data.
 One way to do this is to use our implementation. A full example is available in [dataset_statistics.py](./dataset_statistics.py)
+In addition, you can examine the predictions and compare the results with the labels using our provided implementation.
+See example: [results_investigation.py](./results_investigation.py)
 
 #### Dataset preparation
 ```python
@@ -100,7 +102,7 @@ You can find usage examples in the file [model_examples.py](./model_examples.py)
 ### Configuration
 You can adapt model configuration for your sepecific task in [config](./config.yml) file.
 
-## Results
+## Datasets
 Results obtained on [ASTE_V2](https://aclanthology.org/2020.emnlp-main.183.pdf) 
 and [MultiBooked](https://aclanthology.org/L18-1104.pdf) datasets. The latter was adapted for the ASTE task. 
 It contains only two sentiment classes (POS, NEG). It can be found in the [this](./aste/dataset/multib) directory.
@@ -110,14 +112,6 @@ there were situations where the target or opinion was missing from a given extra
 such an example was discarded (note that we are talking about an example from an aspect-opinion pair, 
 not a whole sentence). During this process, we rejected 4 and 7 examples for the corresponding sets 'ca' and 'eu'.
 
-|DatasetName|TripletPrecision|TripletRecall|TripletF1|
-|-----------|----------------|-------------|---------|
-|14lap      |73.68           |74.91        |74.24    |
-|14res      |78.95           |81.93        |80.36    |
-|15res      |67.31           |72.02        |69.58    |
-|16res      |74.57           |75.99        |75.24    |
-|ca         |65.79           |64.97        |64.88    |
-|eu         |66.03           |66.83        |66.22    |
 
 ## Solution architecture
 ![Architecture](./assets/chunk-ASTE.png)

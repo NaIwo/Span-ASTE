@@ -5,7 +5,7 @@ from .counter import StatsCounter
 
 import numpy as np
 from functools import lru_cache
-from typing import Set, List, Callable, Optional
+from typing import Set, List, Callable, Optional, Tuple
 from itertools import chain, permutations, product
 
 
@@ -161,27 +161,29 @@ def opposite_sentiment_count(true_sentence: Sentence, pred_sentence: Sentence) -
 
 def not_included_words(true_sentence: Sentence, pred_sentence: Sentence) -> List:
     results: List = list()
-    true: Triplet
-    pred: Triplet
-    for true, pred in product(sorted(true_sentence.triplets), sorted(pred_sentence.triplets)):
-        if true != pred:
-            results += _get_words_diff(true, pred)
+    for true, pred in _yield_not_equals_triplets(true_sentence, pred_sentence):
+        results += _get_words_diff(true, pred)
 
     return results
 
 
 def over_included_words(true_sentence: Sentence, pred_sentence: Sentence) -> List:
     results: List = list()
-    true: Triplet
-    pred: Triplet
-    for true, pred in product(sorted(true_sentence.triplets), sorted(pred_sentence.triplets)):
-        if true != pred:
-            results += _get_words_diff(pred, true)
+    for true, pred in _yield_not_equals_triplets(true_sentence, pred_sentence):
+        results += _get_words_diff(pred, true)
 
     return results
 
 
 # ============ Helpers ============ #
+
+def _yield_not_equals_triplets(true_sentence: Sentence, pred_sentence: Sentence) -> Tuple[Sentence, Sentence]:
+    true: Triplet
+    pred: Triplet
+    for true, pred in product(sorted(true_sentence.triplets), sorted(pred_sentence.triplets)):
+        if true != pred:
+            yield true, pred
+
 
 def _get_words_diff(true: Triplet, pred: Triplet) -> List:
     results: List = list()
