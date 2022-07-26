@@ -2,7 +2,7 @@ general:
   device: cuda # {cpu, cuda}
   logging-level: INFO
 dataset:
-  batch-size: 16
+  batch-size: 4
   effective-batch-size: 1 # gradient accumulation (after (batch-size * effective-batch-size) samples the gradient will be computed)
   number-of-polarities: 3
 model:
@@ -17,15 +17,17 @@ model:
     endpoint:
       distance-embedding-dim: 3
   chunker:
-    mode: hard # {soft, hard} # soft - use lambda factor during chunking (more info in text). hard - use hard chunking (chunk only in place where it is required)
-    dice-loss-alpha: 0.0
+    mode: soft # {soft, hard} # soft - use lambda factor during chunking (more info in text). hard - use hard chunking (chunk only in place where it is required)
+    dice-loss-alpha: 0.2
     lambda-factor: 0.001
     loss-weight: 2.0
+    max-len: 5
   selector:
     dice-loss-alpha: 0.5
     loss-weight: 1.0
   triplet-extractor:
-    loss-weight: 3.0
+    dice-loss-alpha: 0.7
+    loss-weight: 2.0
 encoder:
   bert:
     source: bert-base-cased

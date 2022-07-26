@@ -151,8 +151,8 @@ def opposite_sentiment_count(true_sentence: Sentence, pred_sentence: Sentence) -
             continue
         else:
             if (true.aspect_span == pred.aspect_span) and (true.opinion_span == pred.opinion_span):
-                true_sentiment: str = ASTELabels[true.sentiment]
-                pred_sentiment: str = ASTELabels[pred.sentiment]
+                true_sentiment: ASTELabels = ASTELabels[true.sentiment]
+                pred_sentiment: ASTELabels = ASTELabels[pred.sentiment]
                 sc.numerator += (true_sentiment == ASTELabels.POS and pred_sentiment == ASTELabels.NEG) or (
                         true_sentiment == ASTELabels.NEG and pred_sentiment == ASTELabels.POS)
 

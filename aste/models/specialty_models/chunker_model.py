@@ -1,6 +1,7 @@
 from ASTE.utils import config
 from ASTE.dataset.reader import Batch
 from ASTE.dataset.domain.const import ChunkCode
+from ASTE.dataset.domain.sentence import Sentence
 from ASTE.aste.losses import DiceLoss
 from ASTE.aste.tools.metrics import Metric, get_selected_metrics
 from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
@@ -57,27 +58,41 @@ class ChunkerModel(BaseModel):
     @staticmethod
     def _get_spans_from_single_sample(sample: Batch, prediction: torch.Tensor) -> torch.Tensor:
         prediction = ChunkerModel._get_chunk_indexes(sample, prediction)
-        predicted_spans: torch.Tensor = prediction.unfold(0, 2, 1).clone()
+        predicted_spans = torch.combinations(prediction)
         # Because we perform split ->before<- selected word.
         predicted_spans[:, 1] -= 1
-        # This deletion is due to offset in padding. Some spans can started from this offset and
-        # we could end up with wrong extracted span.
-        predicted_spans = predicted_spans[torch.where(predicted_spans[:, 0] <= predicted_spans[:, 1])[0]]
-        return predicted_spans
+        max_len: int = config['model']['chunker']['max-len']
+        lengths: torch.Tensor = predicted_spans[:, 1] - predicted_spans[:, 0]
+        proper_indexes: torch.Tensor = torch.where(lengths <= max_len)[0]
+        predicted_spans = predicted_spans[proper_indexes]
+        predicted_spans = ChunkerModel._handle_empty_tensor(sample, predicted_spans)
+
+        return predicted_spans.to(torch.int32)
 
     @staticmethod
     def _get_chunk_indexes(sample: Batch, prediction: torch.Tensor) -> torch.Tensor:
         offset: int = sample.sentence_obj[0].encoder.offset
         prediction = prediction[:sample.sentence_obj[0].encoded_sentence_length]
-        sub_mask: torch.Tensor = sample.sub_words_mask[0][:sample.sentence_obj[0].encoded_sentence_length]
         # Prediction help - if a token consists of several sub-tokens, we certainly do not split in those sub-tokens
-        prediction = torch.where(sub_mask.bool(), prediction, ChunkCode.NOT_SPLIT)
         max_token: int = len(prediction)
-        prediction = torch.where(prediction)[0]
+        indexes: torch.Tensor = torch.where(prediction)[0]
+        s: Sentence = sample.sentence_obj[0]
+        prediction: torch.Tensor = torch.tensor(
+            [s.get_index_after_encoding(s.get_index_before_encoding(idx)) for idx in indexes],
+            device=config['general']['device'])
+
         # Start and end of spans are the same as start and end of sentence
         prediction = torch.nn.functional.pad(prediction, [1, 0], mode='constant', value=offset)
         prediction = torch.nn.functional.pad(prediction, [0, 1], mode='constant', value=max_token - offset)
-        return prediction
+        return torch.unique(prediction)
+
+    @staticmethod
+    def _handle_empty_tensor(sample: Batch, predicted_spans: torch.Tensor) -> torch.Tensor:
+        if not predicted_spans.nelement():
+            offset: int = sample.sentence_obj[0].encoder.offset
+            predicted_spans = torch.tensor([[offset, sample.sentence_obj[0].encoded_sentence_length - offset - 1]],
+                                           device=config['general']['device'])
+        return predicted_spans
 
     def get_loss(self, model_out: ModelOutput) -> ModelLoss:
         predictions: torch.Tensor = model_out.chunker_output

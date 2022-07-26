@@ -21,11 +21,11 @@ class BertBaseModel(BaseModel):
         super(BertBaseModel, self).__init__(model_name)
         self.emb_layer: BaseEmbedding = Bert()
         self.chunker: BaseModel = ChunkerModel(input_dim=self.emb_layer.embedding_dim)
-        self.aggregator: BaseAggregator = AttentionAggregator(input_dim=self.emb_layer.embedding_dim)
+        self.aggregator: BaseAggregator = EndPointAggregator(input_dim=self.emb_layer.embedding_dim)
         self.span_selector: BaseModel = Selector(input_dim=self.aggregator.output_dim)
         self.triplets_extractor: BaseModel = TripletExtractorModel(input_dim=self.aggregator.output_dim)
 
-        epochs: List = [12, 15, config['model']['total-epochs']]
+        epochs: List = [2, 4, config['model']['total-epochs']]
 
         self.training_scheduler: Dict = {
             range(0, epochs[0]): {
