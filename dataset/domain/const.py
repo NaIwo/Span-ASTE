@@ -3,6 +3,7 @@ from enum import IntEnum
 
 class ChunkCode(IntEnum):
     NOT_RELEVANT: int = -1
+    BEGIN_SPLIT: int = 2
     SPLIT: int = 1
     NOT_SPLIT: int = 0
 
