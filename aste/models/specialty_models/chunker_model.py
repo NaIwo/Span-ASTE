@@ -59,7 +59,7 @@ class ChunkerModel(BaseModel):
         context, _ = pad_packed_sequence(context, batch_first=True)
 
         context = self.linear_layer(context)
-        return self.final_layer(context).view(-1, self.tagset_size)
+        return self.final_layer(context)
 
     @staticmethod
     def init_hidden(size: int, batch_size: int) -> Tuple[torch.Tensor, torch.Tensor]:
