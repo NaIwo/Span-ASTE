@@ -46,7 +46,7 @@ class BertBaseModel(BaseModel):
         emb_chunker: torch.Tensor = self.emb_layer(batch.sentence, batch.mask)
 
         chunker_output: torch.Tensor = self.chunker(emb_chunker, batch.mask)
-        predicted_spans: List[torch.Tensor] = self.chunker.get_spans(batch, chunker_output)
+        predicted_spans: List[torch.Tensor] = self.chunker.get_spans(chunker_output, batch)
 
         agg_emb: torch.Tensor = self.aggregator.aggregate(emb_chunker, predicted_spans)
 

@@ -2,7 +2,7 @@ general:
   device: cuda # {cpu, cuda}
   logging-level: INFO
 dataset:
-  batch-size: 2
+  batch-size: 8
   effective-batch-size: 1 # gradient accumulation (after (batch-size * effective-batch-size) samples the gradient will be computed)
   number-of-polarities: 3
 model:
@@ -17,8 +17,7 @@ model:
     endpoint:
       distance-embedding-dim: 3
   chunker:
-    dice-loss-alpha: 0.2
-    loss-weight: 0.5
+    loss-weight: 2.0
   selector:
     dice-loss-alpha: 0.5
     loss-weight: 1.0
