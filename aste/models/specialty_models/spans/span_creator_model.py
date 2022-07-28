@@ -1,7 +1,7 @@
 from ASTE.utils import config
 from ASTE.dataset.reader import Batch
 from ASTE.dataset.domain.const import ChunkCode
-from ASTE.aste.models.specialty_models.chunks.crf import CRF
+from ASTE.aste.models.specialty_models.spans.crf import CRF
 from ASTE.aste.tools.metrics import Metric, get_selected_metrics
 from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
 
@@ -10,9 +10,9 @@ from typing import List, Tuple
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_sequence
 
 
-class ChunkerModel(BaseModel):
-    def __init__(self, input_dim: int, model_name: str = 'Chunker Model'):
-        super(ChunkerModel, self).__init__(model_name)
+class SpanCreatorModel(BaseModel):
+    def __init__(self, input_dim: int, model_name: str = 'Span Creator Model'):
+        super(SpanCreatorModel, self).__init__(model_name)
         self.metrics: Metric = Metric(name='Chunker', metrics=get_selected_metrics(for_spans=True)).to(
             config['general']['device'])
 
