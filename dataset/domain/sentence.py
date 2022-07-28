@@ -59,6 +59,9 @@ class Sentence:
     def get_index_before_encoding(self, idx: int) -> int:
         return sum(self.sub_words_mask[:idx])
 
+    def agree_index(self, idx: int) -> int:
+        return self.get_index_after_encoding(self.get_index_before_encoding(idx))
+
     def __eq__(self, other) -> bool:
         if not isinstance(other, Sentence):
             raise NotImplemented

@@ -7,7 +7,7 @@ from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
 
 import torch
 from typing import List, Tuple
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_sequence
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
 class SpanCreatorModel(BaseModel):
@@ -51,27 +51,29 @@ class SpanCreatorModel(BaseModel):
             offset: int = sample.sentence_obj[0].encoder.offset
             best_path[:offset] = ChunkCode.NOT_SPLIT
             best_path[sum(sample.mask[0]) - offset:] = ChunkCode.NOT_SPLIT
-            results.append(self.get_spans_from_sequence(best_path))
+            results.append(self.get_spans_from_sequence(best_path, sample))
 
         return results
 
     @staticmethod
-    def get_spans_from_sequence(seq: torch.Tensor) -> torch.Tensor:
+    def get_spans_from_sequence(seq: torch.Tensor, sample: Batch) -> torch.Tensor:
         begins: torch.Tensor = torch.where(seq == ChunkCode.BEGIN_SPLIT)[0]
         begins = torch.cat((begins, torch.tensor([len(seq)], device=config['general']['device'])))
+        begins: List = [sample.sentence_obj[0].agree_index(idx) for idx in begins]
         results: List = list()
 
         idx: int
-        b_idx: torch.Tensor
+        b_idx: int
         end_idx: int
         for idx, b_idx in enumerate(begins[:-1]):
             s: torch.Tensor = seq[b_idx:begins[idx + 1]]
             if ChunkCode.NOT_SPLIT in s:
-                end_idx = torch.where(s == ChunkCode.NOT_SPLIT)[0][0]
+                end_idx = int(torch.where(s == ChunkCode.NOT_SPLIT)[0][0])
                 end_idx += b_idx - 1
             else:
                 end_idx = begins[idx + 1] - 1
             results.append([b_idx, end_idx])
+
         if not results:
             results.append([0, len(seq) - 1])
         return torch.tensor(results).to(config['general']['device'])
