@@ -8,7 +8,7 @@ if __name__ == '__main__':
     # You can perform investigation about your results by using ResultInvestigator class.
     for dataset in ['14lap', '14res', '15res', '16res']:
         label_path: str = join(getcwd(), 'dataset', 'data', 'ASTE_data_v2', dataset, 'test.txt')
-        pred_path: str = join(getcwd(), 'results', '14lap_res.txt')
+        pred_path: str = join(getcwd(), 'results', f'{dataset}_res.txt')
 
         # One thing is required to do. Build ASTEDataset from original data and predicted one
         original_data = ASTEDataset(label_path)
