@@ -116,7 +116,7 @@ class BertBaseModel(BaseModel):
                 true_spans: torch.Tensor = torch.cat([sample.aspect_spans[0], sample.opinion_spans[0]], dim=0).unique(
                     dim=0)
                 num_correct_predicted += self._count_intersection(true_spans, model_output.predicted_spans[0])
-                num_predicted += model_output.predicted_spans[0].shape[0]
+                num_predicted += model_output.predicted_spans[0].unique(dim=0).shape[0]
                 true_num += true_spans.shape[0] - int(-1 in true_spans)
         ratio: float = num_correct_predicted / true_num
         logging.info(
@@ -129,6 +129,7 @@ class BertBaseModel(BaseModel):
 
     @staticmethod
     def _count_intersection(true_spans: torch.Tensor, predicted_spans: torch.Tensor) -> int:
+        predicted_spans = predicted_spans.unique(dim=0)
         all_spans: torch.Tensor = torch.cat([true_spans, predicted_spans], dim=0)
         uniques, counts = torch.unique(all_spans, return_counts=True, dim=0)
         return uniques[counts > 1].shape[0]

@@ -9,7 +9,7 @@ model:
   total-epochs: 120
   learning-rate: 0.0001
   early-stopping: 24 # num of epochs without improvement
-  best-epoch-objective: TripletF1 # you can choose: loss and all of metrics
+  best-epoch-objective: SpanF1 # you can choose: loss and all of metrics
   bert:
     learning-rate: 0.00001
     source: bert-base-cased

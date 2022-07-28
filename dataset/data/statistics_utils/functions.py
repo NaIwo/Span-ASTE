@@ -29,18 +29,6 @@ def triplets_count(sentence: Sentence) -> StatsCounter:
     return StatsCounter(numerator=len(sentence.triplets))
 
 
-def encoder_mean_chunk_length(sentence: Sentence) -> StatsCounter:
-    chunk_label: np.ndarray = get_chunk_label_from_sentence(sentence)
-    return StatsCounter(numerator=len(sentence.sub_words_mask) - sentence.encoder.offset,
-                        denominator=np.where(chunk_label == ChunkCode.SPLIT)[0].shape[0])
-
-
-def word_mean_chunk_length(sentence: Sentence) -> StatsCounter:
-    chunk_label: np.ndarray = get_chunk_label_from_sentence(sentence)
-    return StatsCounter(numerator=sentence.sentence_length,
-                        denominator=np.where(chunk_label == ChunkCode.SPLIT)[0].shape[0])
-
-
 def specific_sentiment_count(sentence: Sentence, sentiment: ASTELabels) -> StatsCounter:
     sc = StatsCounter()
 

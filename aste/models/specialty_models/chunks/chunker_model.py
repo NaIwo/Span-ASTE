@@ -84,8 +84,9 @@ class ChunkerModel(BaseModel):
     def update_metrics(self, model_out: ModelOutput) -> None:
         b: Batch = model_out.batch
         for pred, aspect, opinion in zip(model_out.predicted_spans, b.aspect_spans, b.opinion_spans):
-            true: torch.Tensor = torch.cat([aspect, opinion], dim=0)
-            self.metrics(pred, true)
+            true: torch.Tensor = torch.cat([aspect, opinion], dim=0).unique(dim=0)
+            true_count: int = true.shape[0] - int(-1 in true)
+            self.metrics(pred, true, true_count)
 
     def get_metrics(self) -> ModelMetric:
         return ModelMetric(chunker_metric=self.metrics.compute())
