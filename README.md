@@ -1,9 +1,8 @@
 # Span-ASTE
 
 ## Brief description
-This repository contains code for the Aspect Sentiment Triplet Extraction (ASTE) task. 
-The solution (as of publication time) achieves some of the best results in the field. 
-It reduces the complexity by working on automatically selected word phrases (chunk) and unifies the final results thanks to the CRF layer. 
+This repository contains code for the Aspect Sentiment Triplet Extraction (ASTE) task.
+It reduces the complexity by working on automatically selected word phrases (spans) and unifies the final results thanks to the CRF layer. 
 Additionally, the selection layer supports the selection of correct phrases. 
 Embedding of words are obtained thanks to BERT and embedding of phrases are aggregated using attention layer.
 
