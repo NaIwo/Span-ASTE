@@ -1,4 +1,4 @@
-# Chunk-ASTE
+# Span-ASTE
 
 ## Brief description
 This repository contains code for the Aspect Sentiment Triplet Extraction (ASTE) task. 
@@ -114,4 +114,4 @@ not a whole sentence). During this process, we rejected 4 and 7 examples for the
 
 
 ## Solution architecture
-![Architecture](./assets/chunk-ASTE.png)
+![Architecture](./assets/span-ASTE.png)
