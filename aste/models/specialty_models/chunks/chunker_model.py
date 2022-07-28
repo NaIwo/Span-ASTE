@@ -13,8 +13,8 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_se
 class ChunkerModel(BaseModel):
     def __init__(self, input_dim: int, model_name: str = 'Chunker Model'):
         super(ChunkerModel, self).__init__(model_name)
-        self.metrics: Metric = Metric(name='Chunker', metrics=get_selected_metrics(multiclass=None, num_classes=3),
-                                      ignore_index=ChunkCode.NOT_RELEVANT).to(config['general']['device'])
+        self.metrics: Metric = Metric(name='Chunker', metrics=get_selected_metrics(for_spans=True)).to(
+            config['general']['device'])
 
         self.input_dim: int = input_dim
 
@@ -23,21 +23,8 @@ class ChunkerModel(BaseModel):
         self.linear_layer = torch.nn.Linear(input_dim, input_dim // 2)
         self.final_layer = torch.nn.Linear(input_dim // 2, 3)
 
-    def forward(self, data: torch.Tensor, mask: torch.Tensor) -> List[torch.Tensor]:
+    def forward(self, data: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         return self.get_features(data, mask)
-
-    def get_spans(self, data: torch.Tensor, batch: Batch) -> List[torch.Tensor]:
-        results: List[torch.Tensor] = list()
-        best_paths: List[List[int]] = self.crf.decode(data, mask=batch.mask)
-
-        for best_path, sample in zip(best_paths, batch):
-            best_path = torch.tensor(best_path).to(config['general']['device'])
-            offset: int = sample.sentence_obj[0].encoder.offset
-            best_path[:offset] = ChunkCode.NOT_SPLIT
-            best_path[sum(sample.mask[0]) - offset:] = ChunkCode.NOT_SPLIT
-            results.append(self.get_spans_from_sequence(best_path))
-
-        return results
 
     def get_features(self, data: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         lengths: torch.Tensor = torch.sum(mask, dim=1).cpu()
@@ -54,6 +41,19 @@ class ChunkerModel(BaseModel):
     def init_hidden(size: int, batch_size: int) -> Tuple[torch.Tensor, torch.Tensor]:
         return (torch.randn(2, batch_size, size // 2).to(config['general']['device']),
                 torch.randn(2, batch_size, size // 2).to(config['general']['device']))
+
+    def get_spans(self, data: torch.Tensor, batch: Batch) -> List[torch.Tensor]:
+        results: List[torch.Tensor] = list()
+        best_paths: List[List[int]] = self.crf.decode(data, mask=batch.mask[:, :data.shape[1], ...])
+
+        for best_path, sample in zip(best_paths, batch):
+            best_path = torch.tensor(best_path).to(config['general']['device'])
+            offset: int = sample.sentence_obj[0].encoder.offset
+            best_path[:offset] = ChunkCode.NOT_SPLIT
+            best_path[sum(sample.mask[0]) - offset:] = ChunkCode.NOT_SPLIT
+            results.append(self.get_spans_from_sequence(best_path))
+
+        return results
 
     @staticmethod
     def get_spans_from_sequence(seq: torch.Tensor) -> torch.Tensor:
@@ -82,12 +82,10 @@ class ChunkerModel(BaseModel):
         return ModelLoss(chunker_loss=loss)
 
     def update_metrics(self, model_out: ModelOutput) -> None:
-        preds = self.crf.decode(model_out.chunker_output, model_out.batch.mask)
-        preds_t: List = list()
-        for idx, pred in enumerate(preds):
-            preds_t.append(torch.tensor(pred).to(config['general']['device']))
-        preds_t = pad_sequence(preds_t, batch_first=True, padding_value=ChunkCode.NOT_RELEVANT)
-        self.metrics(preds_t.view([-1]), model_out.batch.chunk_label.view([-1]))
+        b: Batch = model_out.batch
+        for pred, aspect, opinion in zip(model_out.predicted_spans, b.aspect_spans, b.opinion_spans):
+            true: torch.Tensor = torch.cat([aspect, opinion], dim=0)
+            self.metrics(pred, true)
 
     def get_metrics(self) -> ModelMetric:
         return ModelMetric(chunker_metric=self.metrics.compute())

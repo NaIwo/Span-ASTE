@@ -26,7 +26,7 @@ class Metric(MetricCollection):
         return computed
 
 
-class TripletMetric(TorchMetric):
+class SpanMetric(TorchMetric):
     def __init__(self, dist_sync_on_step: bool = False):
         TorchMetric.__init__(self, dist_sync_on_step=dist_sync_on_step)
 
@@ -34,11 +34,14 @@ class TripletMetric(TorchMetric):
         self.add_state("total_predicted", default=torch.tensor(0), dist_reduce_fx="sum")
         self.add_state("total_target", default=torch.tensor(0), dist_reduce_fx="sum")
 
-    def update(self, preds: Tensor, target_matrix: Tensor, full_target_count: int) -> None:
+    def update(self, preds: Tensor, target_in_stage: Tensor, full_target_count: Optional[int] = None) -> None:
         preds = preds.unique(dim=0)
-        target_matrix = target_matrix.unique(dim=0)
+        target_in_stage = target_in_stage.unique(dim=0)
 
-        self.correct += self._count_correct_num(preds, target_matrix)
+        if full_target_count is None:
+            full_target_count = target_in_stage.shape[0]
+
+        self.correct += self._count_correct_num(preds, target_in_stage)
         self.total_predicted += preds.shape[0]
         self.total_target += full_target_count
 
@@ -56,7 +59,7 @@ class TripletMetric(TorchMetric):
         return dividend / divider if divider != 0. else 0.
 
 
-class TripletPrecision(TripletMetric):
+class SpanPrecision(SpanMetric):
     def __init__(self, dist_sync_on_step=False):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
 
@@ -64,7 +67,7 @@ class TripletPrecision(TripletMetric):
         return self.safe_div(self.correct, self.total_predicted)
 
 
-class TripletRecall(TripletMetric):
+class SpanRecall(SpanMetric):
     def __init__(self, dist_sync_on_step=False):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
 
@@ -72,7 +75,7 @@ class TripletRecall(TripletMetric):
         return self.safe_div(self.correct, self.total_target)
 
 
-class TripletF1(TripletMetric):
+class SpanF1(SpanMetric):
     def __init__(self, dist_sync_on_step=False):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
 
@@ -83,12 +86,12 @@ class TripletF1(TripletMetric):
         return self.safe_div(2 * (precision * recall), (precision + recall))
 
 
-def get_selected_metrics(num_classes: int = 1, multiclass: Optional[bool] = None, for_triplets: bool = False) -> List:
-    if for_triplets:
+def get_selected_metrics(num_classes: int = 1, multiclass: Optional[bool] = None, for_spans: bool = False) -> List:
+    if for_spans:
         return [
-            TripletPrecision(),
-            TripletRecall(),
-            TripletF1()
+            SpanPrecision(),
+            SpanRecall(),
+            SpanF1()
         ]
     else:
         return [

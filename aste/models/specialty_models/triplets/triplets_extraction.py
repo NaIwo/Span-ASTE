@@ -23,7 +23,7 @@ class TripletExtractorModel(BaseModel):
         self.independent_metrics: Metric = Metric(name='Independent matrix predictions', metrics=metrics,
                                                   ignore_index=ASTELabels.NOT_RELEVANT).to(config['general']['device'])
 
-        metrics = get_selected_metrics(for_triplets=True)
+        metrics = get_selected_metrics(for_spans=True)
         self.final_metrics: Metric = Metric(name='Final predictions', metrics=metrics).to(config['general']['device'])
 
         input_dimension: int = input_dim * 2
