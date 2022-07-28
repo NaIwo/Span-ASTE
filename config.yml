@@ -2,14 +2,14 @@ general:
   device: cuda # {cpu, cuda}
   logging-level: INFO
 dataset:
-  batch-size: 4
+  batch-size: 2
   effective-batch-size: 1 # gradient accumulation (after (batch-size * effective-batch-size) samples the gradient will be computed)
   number-of-polarities: 3
 model:
   total-epochs: 120
   learning-rate: 0.0001
   early-stopping: 24 # num of epochs without improvement
-  best-epoch-objective: TripletF1 # you can choose: loss and all of metrics
+  best-epoch-objective: SpanF1 # you can choose: loss and all of metrics
   bert:
     learning-rate: 0.00001
     source: bert-base-cased

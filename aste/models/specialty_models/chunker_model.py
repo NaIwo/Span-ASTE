@@ -16,8 +16,8 @@ class ChunkerModel(BaseModel):
         self.chunk_loss_ignore = DiceLoss(ignore_index=ChunkCode.NOT_RELEVANT,
                                           alpha=config['model']['chunker']['dice-loss-alpha'])
         self.loss_lambda: float = config['model']['chunker']['lambda-factor']
-        self.metrics: Metric = Metric(name='Chunker', metrics=get_selected_metrics(multiclass=False),
-                                      ignore_index=ChunkCode.NOT_RELEVANT).to(config['general']['device'])
+        self.metrics: Metric = Metric(name='Chunker', metrics=get_selected_metrics(for_spans=True)).to(
+            config['general']['device'])
 
         self.mode: int = self._get_mode()
 
@@ -106,22 +106,13 @@ class ChunkerModel(BaseModel):
         return ModelLoss(chunker_loss=loss_ignore + self.loss_lambda * torch.mean(diff) * self.mode)
 
     def update_metrics(self, model_out: ModelOutput) -> None:
-        self.metrics(
-            self._clean_chunker_output(model_out.batch,
-                                       model_out.chunker_output.view([-1, model_out.chunker_output.shape[-1]])),
-            model_out.batch.chunk_label.view([-1])
-        )
+        b: Batch = model_out.batch
+        for pred, aspect, opinion in zip(model_out.predicted_spans, b.aspect_spans, b.opinion_spans):
+            true: torch.Tensor = torch.cat([aspect, opinion], dim=0)
+            self.metrics(pred, true)
 
     def get_metrics(self) -> ModelMetric:
         return ModelMetric(chunker_metric=self.metrics.compute())
 
     def reset_metrics(self) -> None:
         self.metrics.reset()
-
-    @staticmethod
-    def _clean_chunker_output(batch: Batch, chunker_out: torch.Tensor) -> torch.Tensor:
-        # Prediction help - if a token consists of several sub-tokens, we certainly do not split in those sub-tokens.
-        fill_value: torch.Tensor = torch.zeros(chunker_out.shape[-1]).to(config['general']['device'])
-        fill_value[ChunkCode.NOT_SPLIT] = 1.
-        sub_mask: torch.Tensor = batch.sub_words_mask.bool().view([-1, 1])
-        return torch.where(sub_mask, chunker_out, fill_value)
