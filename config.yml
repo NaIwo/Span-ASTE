@@ -22,7 +22,6 @@ model:
     dice-loss-alpha: 0.5
     loss-weight: 1.0
   triplet-extractor:
-    dice-loss-alpha: 0.7
     loss-weight: 2.0
 encoder:
   bert:

@@ -13,7 +13,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 class SpanCreatorModel(BaseModel):
     def __init__(self, input_dim: int, model_name: str = 'Span Creator Model'):
         super(SpanCreatorModel, self).__init__(model_name)
-        self.metrics: Metric = Metric(name='Chunker', metrics=get_selected_metrics(for_spans=True)).to(
+        self.metrics: Metric = Metric(name='Span Creator', metrics=get_selected_metrics(for_spans=True)).to(
             config['general']['device'])
 
         self.input_dim: int = input_dim
@@ -72,6 +72,7 @@ class SpanCreatorModel(BaseModel):
                 end_idx += b_idx - 1
             else:
                 end_idx = begins[idx + 1] - 1
+
             results.append([b_idx, end_idx])
 
         if not results:
