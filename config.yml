@@ -17,8 +17,8 @@ model:
     endpoint:
       distance-embedding-dim: 3
   chunker:
-    mode: soft # {soft, hard} # soft - use lambda factor during chunking (more info in text). hard - use hard chunking (chunk only in place where it is required)
-    dice-loss-alpha: 0.2
+    mode: hard # {soft, hard} # soft - use lambda factor during chunking (more info in text). hard - use hard chunking (chunk only in place where it is required)
+    dice-loss-alpha: 0.0
     lambda-factor: 0.001
     loss-weight: 2.0
     max-len: 5
@@ -27,7 +27,7 @@ model:
     loss-weight: 1.0
   triplet-extractor:
     dice-loss-alpha: 0.7
-    loss-weight: 2.0
+    loss-weight: 3.0
 encoder:
   bert:
     source: bert-base-cased
