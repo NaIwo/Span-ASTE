@@ -23,8 +23,9 @@ class Selector(BaseModel):
         self.dropout = torch.nn.Dropout(0.1)
         self.linear_layer_1 = torch.nn.Linear(input_dim, 300)
         self.linear_layer_2 = torch.nn.Linear(300, 100)
-        self.final_layer = torch.nn.Linear(100, 2)
-        self.softmax = torch.nn.Softmax(dim=-1)
+        self.final_layer = torch.nn.Linear(100, 1)
+        self.sigmoid = torch.nn.Sigmoid()
+        self.sigmoid_multiplication: float = 1.
 
     def forward(self, data: torch.Tensor) -> torch.Tensor:
         layer: torch.nn.Linear
@@ -32,8 +33,8 @@ class Selector(BaseModel):
             data = layer(data)
             data = torch.relu(data)
             data = self.dropout(data)
-        data = self.final_layer(data)
-        return self.softmax(data)
+        data = self.final_layer(data) * self.sigmoid_multiplication
+        return self.sigmoid(data)
 
     def get_loss(self, model_out: ModelOutput) -> ModelLoss:
         true_labels: torch.Tensor = self.get_labels(model_out, pad_with=self._ignore_index)
@@ -43,8 +44,7 @@ class Selector(BaseModel):
 
     def update_metrics(self, model_out: ModelOutput) -> None:
         true_labels: torch.Tensor = self.get_labels(model_out, pad_with=self._ignore_index)
-        self.metrics(model_out.span_selector_output.view([-1, model_out.span_selector_output.shape[-1]]),
-                     true_labels.view([-1]))
+        self.metrics(model_out.span_selector_output.view([-1]), true_labels.view([-1]))
 
     @staticmethod
     @lru_cache(maxsize=None)

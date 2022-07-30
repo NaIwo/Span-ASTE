@@ -51,7 +51,7 @@ class BertBaseModel(BaseModel):
         agg_emb: torch.Tensor = self.aggregator.aggregate(emb_chunker, predicted_spans)
 
         span_selector_output: torch.Tensor = self.span_selector(agg_emb)
-        triplet_input: torch.Tensor = span_selector_output[..., 1:] * agg_emb
+        triplet_input: torch.Tensor = span_selector_output[..., :] * agg_emb
 
         triplet_results: torch.Tensor = self.triplets_extractor(triplet_input)
 
@@ -102,6 +102,8 @@ class BertBaseModel(BaseModel):
                 self.warmup = scheduler_idx < 2
                 break
 
+        if self.performed_epochs >= list(self.training_scheduler.keys())[-1][0]:
+            self.span_selector.sigmoid_multiplication = config['selector']['sigmoid-multiplication']
         self.performed_epochs += 1
 
     @torch.no_grad()
