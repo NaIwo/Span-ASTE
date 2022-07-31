@@ -103,7 +103,7 @@ class BertBaseModel(BaseModel):
                 break
 
         if self.performed_epochs >= list(self.training_scheduler.keys())[-1][0]:
-            self.span_selector.sigmoid_multiplication = config['selector']['sigmoid-multiplication']
+            self.span_selector.sigmoid_multiplication = config['model']['selector']['sigmoid-multiplication']
         self.performed_epochs += 1
 
     @torch.no_grad()
