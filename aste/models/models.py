@@ -20,7 +20,7 @@ class BertBaseModel(BaseModel):
 
         super(BertBaseModel, self).__init__(model_name)
         self.emb_layer: BaseEmbedding = Bert()
-        self.chunker: BaseModel = SpanCreatorModel(input_dim=self.emb_layer.embedding_dim)
+        self.span_creator: BaseModel = SpanCreatorModel(input_dim=self.emb_layer.embedding_dim)
         self.aggregator: BaseAggregator = EndPointAggregator(input_dim=self.emb_layer.embedding_dim)
         self.span_selector: BaseModel = Selector(input_dim=self.aggregator.output_dim)
         self.triplets_extractor: BaseModel = TripletExtractorModel(input_dim=self.aggregator.output_dim)
@@ -30,23 +30,23 @@ class BertBaseModel(BaseModel):
         self.training_scheduler: Dict = {
             range(0, epochs[0]): {
                 'freeze': [self.triplets_extractor],
-                'unfreeze': [self.chunker, self.span_selector, self.emb_layer]
+                'unfreeze': [self.span_creator, self.span_selector, self.emb_layer]
             },
             range(epochs[0], epochs[1]): {
-                'freeze': [self.chunker, self.span_selector, self.emb_layer],
+                'freeze': [self.span_creator, self.span_selector, self.emb_layer],
                 'unfreeze': [self.triplets_extractor]
             },
             range(epochs[1], epochs[2]): {
                 'freeze': [],
-                'unfreeze': [self.chunker, self.span_selector, self.triplets_extractor, self.emb_layer],
+                'unfreeze': [self.span_creator, self.span_selector, self.triplets_extractor, self.emb_layer],
             }
         }
 
     def forward(self, batch: Batch) -> ModelOutput:
         emb_chunker: torch.Tensor = self.emb_layer(batch.sentence, batch.mask)
 
-        chunker_output: torch.Tensor = self.chunker(emb_chunker, batch.mask)
-        predicted_spans: List[torch.Tensor] = self.chunker.get_spans(chunker_output, batch)
+        chunker_output: torch.Tensor = self.span_creator(emb_chunker, batch.mask)
+        predicted_spans: List[torch.Tensor] = self.span_creator.get_spans(chunker_output, batch)
 
         agg_emb: torch.Tensor = self.aggregator.aggregate(emb_chunker, predicted_spans)
 
@@ -62,30 +62,30 @@ class BertBaseModel(BaseModel):
                            triplet_results=triplet_results)
 
     def get_loss(self, model_out: ModelOutput) -> ModelLoss:
-        return ModelLoss.from_instances(chunker_loss=self.chunker.get_loss(model_out) * self.chunker.trainable,
+        return ModelLoss.from_instances(chunker_loss=self.span_creator.get_loss(model_out) * self.span_creator.trainable,
                                         triplet_extractor_loss=self.triplets_extractor.get_loss(
                                             model_out) * self.triplets_extractor.trainable,
                                         span_selector_loss=self.span_selector.get_loss(
                                             model_out) * self.span_selector.trainable)
 
     def update_metrics(self, model_out: ModelOutput) -> None:
-        self.chunker.update_metrics(model_out)
+        self.span_creator.update_metrics(model_out)
         self.triplets_extractor.update_metrics(model_out)
         self.span_selector.update_metrics(model_out)
 
     def get_metrics(self) -> ModelMetric:
-        return ModelMetric.from_instances(chunker_metric=self.chunker.get_metrics(),
+        return ModelMetric.from_instances(chunker_metric=self.span_creator.get_metrics(),
                                           triplet_metric=self.triplets_extractor.get_metrics(),
                                           span_selector_metric=self.span_selector.get_metrics())
 
     def reset_metrics(self) -> None:
-        self.chunker.reset_metrics()
+        self.span_creator.reset_metrics()
         self.triplets_extractor.reset_metrics()
         self.span_selector.reset_metrics()
 
     def get_params_and_lr(self) -> List[Dict]:
         return [
-            {'params': self.chunker.parameters(), 'lr': config['model']['learning-rate']},
+            {'params': self.span_creator.parameters(), 'lr': config['model']['learning-rate']},
             {'params': self.aggregator.parameters(), 'lr': config['model']['learning-rate']},
             {'params': self.span_selector.parameters(), 'lr': config['model']['learning-rate']},
             {'params': self.triplets_extractor.parameters(), 'lr': config['model']['learning-rate']},
