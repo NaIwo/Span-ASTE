@@ -43,7 +43,7 @@ def run() -> None:
         trainer.load_model(save_path)
 
         local_results: Dict = trainer.test(dev_data)
-        dev_score = local_results[ModelMetric.NAME].triplet_metric['TripletF1']
+        dev_score = local_results[ModelMetric.NAME].triplet_metric['SpanF1']
 
     local_results: Dict = trainer.test(test_data)
     coverage_results: Dict = trainer.check_coverage_detected_spans(test_data)

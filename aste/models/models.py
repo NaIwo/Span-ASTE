@@ -25,7 +25,7 @@ class BertBaseModel(BaseModel):
         self.span_selector: BaseModel = Selector(input_dim=self.aggregator.output_dim)
         self.triplets_extractor: BaseModel = TripletExtractorModel(input_dim=self.aggregator.output_dim)
 
-        epochs: List = [2, 4, config['model']['total-epochs']]
+        epochs: List = [3, 5, config['model']['total-epochs']]
 
         self.training_scheduler: Dict = {
             range(0, epochs[0]): {
