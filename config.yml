@@ -16,7 +16,7 @@ model:
   aggregators:
     endpoint:
       distance-embedding-dim: 3
-  chunker:
+  span_creator:
     loss-weight: 2.0
   selector:
     dice-loss-alpha: 0.5

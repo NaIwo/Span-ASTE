@@ -17,10 +17,10 @@ MO = TypeVar('MO', bound='ModelOutput')
 class ModelOutput:
     NAME: str = 'Outputs'
 
-    def __init__(self, batch: Batch, chunker_output: Tensor, predicted_spans: List[Tensor],
+    def __init__(self, batch: Batch, span_creator_output: Tensor, predicted_spans: List[Tensor],
                  span_selector_output: Tensor, triplet_results: Tensor):
         self.batch: Batch = batch
-        self.chunker_output: Tensor = chunker_output
+        self.span_creator_output: Tensor = span_creator_output
         self.predicted_spans: List[Tensor] = predicted_spans
         self.span_selector_output: Tensor = span_selector_output
         self.triplet_results: Tensor = triplet_results
@@ -104,9 +104,9 @@ ZERO: Tensor = torch.tensor(0., device=config['general']['device'])
 class ModelLoss:
     NAME: str = 'Losses'
 
-    def __init__(self, *, chunker_loss: Tensor = ZERO, span_selector_loss: Tensor = ZERO,
+    def __init__(self, *, span_creator_loss: Tensor = ZERO, span_selector_loss: Tensor = ZERO,
                  triplet_extractor_loss: Tensor = ZERO, weighted: bool = True):
-        self.chunker_loss: Tensor = chunker_loss
+        self.span_creator_loss: Tensor = span_creator_loss
         self.span_selector_loss: Tensor = span_selector_loss
         self.triplet_extractor_loss: Tensor = triplet_extractor_loss
 
@@ -114,17 +114,17 @@ class ModelLoss:
             self._include_weights()
 
     @classmethod
-    def from_instances(cls, *, chunker_loss: ML, triplet_extractor_loss: ML, span_selector_loss: ML,
+    def from_instances(cls, *, span_creator_loss: ML, triplet_extractor_loss: ML, span_selector_loss: ML,
                        weighted: bool = False) -> ML:
         return cls(
-            chunker_loss=chunker_loss.chunker_loss,
+            span_creator_loss=span_creator_loss.span_creator_loss,
             span_selector_loss=span_selector_loss.span_selector_loss,
             triplet_extractor_loss=triplet_extractor_loss.triplet_extractor_loss,
             weighted=weighted
         )
 
     def _include_weights(self) -> None:
-        self.chunker_loss *= config['model']['chunker']['loss-weight']
+        self.span_creator_loss *= config['model']['span_creator']['loss-weight']
         self.span_selector_loss *= config['model']['selector']['loss-weight']
         self.triplet_extractor_loss *= config['model']['triplet-extractor']['loss-weight']
 
@@ -136,18 +136,18 @@ class ModelLoss:
         return self
 
     def detach(self) -> None:
-        self.chunker_loss = self.chunker_loss.detach()
+        self.span_creator_loss = self.span_creator_loss.detach()
         self.span_selector_loss = self.span_selector_loss.detach()
         self.triplet_extractor_loss = self.triplet_extractor_loss.detach()
 
     @property
     def full_loss(self) -> Tensor:
-        return self.chunker_loss + self.span_selector_loss + self.triplet_extractor_loss
+        return self.span_creator_loss + self.span_selector_loss + self.triplet_extractor_loss
 
     @property
     def _loss_dict(self) -> Dict:
         return {
-            'chunker_loss': float(self.chunker_loss),
+            'span_creator_loss': float(self.span_creator_loss),
             'span_selector_loss': float(self.span_selector_loss),
             'triplet_extractor_loss': float(self.triplet_extractor_loss),
             'full_loss': float(self.full_loss)
@@ -163,7 +163,7 @@ class ModelLoss:
 
     def __add__(self, other: ML) -> ML:
         return ModelLoss(
-            chunker_loss=self.chunker_loss + other.chunker_loss,
+            span_creator_loss=self.span_creator_loss + other.span_creator_loss,
             span_selector_loss=self.span_selector_loss + other.span_selector_loss,
             triplet_extractor_loss=self.triplet_extractor_loss + other.triplet_extractor_loss,
             weighted=False
@@ -171,7 +171,7 @@ class ModelLoss:
 
     def __truediv__(self, other: float) -> ML:
         return ModelLoss(
-            chunker_loss=self.chunker_loss / other,
+            span_creator_loss=self.span_creator_loss / other,
             span_selector_loss=self.span_selector_loss / other,
             triplet_extractor_loss=self.triplet_extractor_loss / other,
             weighted=False
@@ -182,7 +182,7 @@ class ModelLoss:
 
     def __mul__(self, other: float) -> ML:
         return ModelLoss(
-            chunker_loss=self.chunker_loss * other,
+            span_creator_loss=self.span_creator_loss * other,
             span_selector_loss=self.span_selector_loss * other,
             triplet_extractor_loss=self.triplet_extractor_loss * other,
             weighted=False
@@ -206,16 +206,16 @@ class ModelLoss:
 class ModelMetric:
     NAME: str = 'Metrics'
 
-    def __init__(self, *, chunker_metric: Optional[Dict] = None, span_selector_metric: Optional[Dict] = None,
+    def __init__(self, *, span_creator_metric: Optional[Dict] = None, span_selector_metric: Optional[Dict] = None,
                  triplet_metric: Optional[Dict] = None):
-        self.chunker_metric: Optional[Dict] = chunker_metric
+        self.span_creator_metric: Optional[Dict] = span_creator_metric
         self.span_selector_metric: Optional[Dict] = span_selector_metric
         self.triplet_metric: Optional[Dict] = triplet_metric
 
     @classmethod
-    def from_instances(cls, *, chunker_metric: MM, triplet_metric: MM, span_selector_metric: MM) -> MM:
+    def from_instances(cls, *, span_creator_metric: MM, triplet_metric: MM, span_selector_metric: MM) -> MM:
         return cls(
-            chunker_metric=chunker_metric.chunker_metric,
+            span_creator_metric=span_creator_metric.span_creator_metric,
             span_selector_metric=span_selector_metric.span_selector_metric,
             triplet_metric=triplet_metric.triplet_metric
         )
@@ -223,7 +223,7 @@ class ModelMetric:
     @property
     def _all_metrics(self) -> Dict:
         return {
-            'chunker_metrics': self.chunker_metric,
+            'span_creator_metrics': self.span_creator_metric,
             'span_selector_metric': self.span_selector_metric,
             'triplet_metric': self.triplet_metric
         }

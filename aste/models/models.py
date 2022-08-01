@@ -43,12 +43,12 @@ class BertBaseModel(BaseModel):
         }
 
     def forward(self, batch: Batch) -> ModelOutput:
-        emb_chunker: torch.Tensor = self.emb_layer(batch.sentence, batch.mask)
+        emb_span_creator: torch.Tensor = self.emb_layer(batch.sentence, batch.mask)
 
-        chunker_output: torch.Tensor = self.span_creator(emb_chunker, batch.mask)
-        predicted_spans: List[torch.Tensor] = self.span_creator.get_spans(chunker_output, batch)
+        span_creator_output: torch.Tensor = self.span_creator(emb_span_creator, batch.mask)
+        predicted_spans: List[torch.Tensor] = self.span_creator.get_spans(span_creator_output, batch)
 
-        agg_emb: torch.Tensor = self.aggregator.aggregate(emb_chunker, predicted_spans)
+        agg_emb: torch.Tensor = self.aggregator.aggregate(emb_span_creator, predicted_spans)
 
         span_selector_output: torch.Tensor = self.span_selector(agg_emb)
         triplet_input: torch.Tensor = span_selector_output[..., :] * agg_emb
@@ -56,17 +56,18 @@ class BertBaseModel(BaseModel):
         triplet_results: torch.Tensor = self.triplets_extractor(triplet_input)
 
         return ModelOutput(batch=batch,
-                           chunker_output=chunker_output,
+                           span_creator_output=span_creator_output,
                            predicted_spans=predicted_spans,
                            span_selector_output=span_selector_output,
                            triplet_results=triplet_results)
 
     def get_loss(self, model_out: ModelOutput) -> ModelLoss:
-        return ModelLoss.from_instances(chunker_loss=self.span_creator.get_loss(model_out) * self.span_creator.trainable,
-                                        triplet_extractor_loss=self.triplets_extractor.get_loss(
-                                            model_out) * self.triplets_extractor.trainable,
-                                        span_selector_loss=self.span_selector.get_loss(
-                                            model_out) * self.span_selector.trainable)
+        return ModelLoss.from_instances(
+            span_creator_loss=self.span_creator.get_loss(model_out) * self.span_creator.trainable,
+            triplet_extractor_loss=self.triplets_extractor.get_loss(
+                model_out) * self.triplets_extractor.trainable,
+            span_selector_loss=self.span_selector.get_loss(
+                model_out) * self.span_selector.trainable)
 
     def update_metrics(self, model_out: ModelOutput) -> None:
         self.span_creator.update_metrics(model_out)
@@ -74,7 +75,7 @@ class BertBaseModel(BaseModel):
         self.span_selector.update_metrics(model_out)
 
     def get_metrics(self) -> ModelMetric:
-        return ModelMetric.from_instances(chunker_metric=self.span_creator.get_metrics(),
+        return ModelMetric.from_instances(span_creator_metric=self.span_creator.get_metrics(),
                                           triplet_metric=self.triplets_extractor.get_metrics(),
                                           span_selector_metric=self.span_selector.get_metrics())
 

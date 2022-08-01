@@ -80,9 +80,9 @@ class SpanCreatorModel(BaseModel):
         return torch.tensor(results).to(config['general']['device'])
 
     def get_loss(self, model_out: ModelOutput) -> ModelLoss:
-        loss = -self.crf(model_out.chunker_output, model_out.batch.chunk_label, model_out.batch.mask,
+        loss = -self.crf(model_out.span_creator_output, model_out.batch.chunk_label, model_out.batch.mask,
                          reduction='token_mean')
-        return ModelLoss(chunker_loss=loss)
+        return ModelLoss(span_creator_loss=loss)
 
     def update_metrics(self, model_out: ModelOutput) -> None:
         b: Batch = model_out.batch
@@ -92,7 +92,7 @@ class SpanCreatorModel(BaseModel):
             self.metrics(pred, true, true_count)
 
     def get_metrics(self) -> ModelMetric:
-        return ModelMetric(chunker_metric=self.metrics.compute())
+        return ModelMetric(span_selector_metric=self.metrics.compute())
 
     def reset_metrics(self) -> None:
         self.metrics.reset()
