@@ -2,7 +2,7 @@ general:
   device: cuda # {cpu, cuda}
   logging-level: INFO
 dataset:
-  batch-size: 2
+  batch-size: 4
   effective-batch-size: 1 # gradient accumulation (after (batch-size * effective-batch-size) samples the gradient will be computed)
   number-of-polarities: 3
 model:
@@ -25,9 +25,12 @@ model:
   selector:
     dice-loss-alpha: 0.5
     loss-weight: 1.0
+    sigmoid-multiplication: 10. # In the training phase of the full model, increase the importance of the sigmoid input
+                                # [sigmoid(value * neuron)] -
+                                # more drastic incorrect span omitting
   triplet-extractor:
     dice-loss-alpha: 0.7
-    loss-weight: 2.0
+    loss-weight: 3.0
 encoder:
   bert:
     source: bert-base-cased
