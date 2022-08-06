@@ -16,7 +16,8 @@ class TripletExtractorModel(BaseModel):
     def __init__(self, input_dim: int, model_name: str = 'Triplet Extractor Model'):
         super(TripletExtractorModel, self).__init__(model_name=model_name)
 
-        self.triplet_loss = CrossEntropyLoss(ignore_index=ASTELabels.NOT_RELEVANT)
+        self.triplet_loss = DiceLoss(ignore_index=ASTELabels.NOT_RELEVANT,
+                                     alpha=config['model']['triplet-extractor']['dice-loss-alpha'])
 
         metrics: List = get_selected_metrics(num_classes=6, multiclass=True)
         self.independent_metrics: Metric = Metric(name='Independent matrix predictions', metrics=metrics,
