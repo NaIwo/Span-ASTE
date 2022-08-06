@@ -92,7 +92,7 @@ class SpanCreatorModel(BaseModel):
             self.metrics(pred, true, true_count)
 
     def get_metrics(self) -> ModelMetric:
-        return ModelMetric(span_selector_metric=self.metrics.compute())
+        return ModelMetric(span_creator_metric=self.metrics.compute())
 
     def reset_metrics(self) -> None:
         self.metrics.reset()
