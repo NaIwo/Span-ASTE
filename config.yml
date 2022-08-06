@@ -29,7 +29,7 @@ model:
                                 # [sigmoid(value * neuron)] -
                                 # more drastic incorrect span omitting
   triplet-extractor:
-    dice-loss-alpha: 0.7
+    dice-loss-alpha: 0.85
     loss-weight: 3.0
 encoder:
   bert:
