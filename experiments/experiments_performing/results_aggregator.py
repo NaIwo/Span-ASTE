@@ -5,8 +5,8 @@ from typing import Dict, DefaultDict
 
 from ASTE.aste.utils import to_json
 
-SAVE_DIR: str = 'chunk_aste_hard'
-AGG_DIR: str = 'attention_aggregation'
+SAVE_DIR: str = 'without_crf_sigmoid10'
+AGG_DIR: str = 'endpoint'
 
 
 def aggregate(path: str) -> None:
@@ -20,17 +20,20 @@ def aggregate(path: str) -> None:
             num_of_metric_files += 1
             file_path = os.path.join(path, file_name)
             with open(file_path) as json_file:
-                result: Dict = json.load(json_file)['triplet_metric']
-            results['TripletPrecision'] += result['TripletPrecision']
-            results['TripletRecall'] += result['TripletRecall']
-            results['TripletF1'] += result['TripletF1']
+                result: Dict = json.load(json_file)
+            results['TripletPrecision'] += result['triplet_metric']['SpanPrecision']
+            results['TripletRecall'] += result['triplet_metric']['SpanRecall']
+            results['TripletF1'] += result['triplet_metric']['SpanF1']
+
+            coverage_results['Precision'] += result['span_creator_metrics']['SpanPrecision']
+            coverage_results['Recall'] += result['span_creator_metrics']['SpanRecall']
+            coverage_results['F1'] += result['span_creator_metrics']['SpanF1']
 
         elif 'coverage_results' in file_name:
             num_of_coverage_files += 1
             file_path = os.path.join(path, file_name)
             with open(file_path) as json_file:
                 result: Dict = json.load(json_file)
-            coverage_results['Ratio'] += result['Ratio']
             coverage_results['Extracted spans'] += result['Extracted spans']
             coverage_results['Total correct spans'] += result['Total correct spans']
 
@@ -51,7 +54,7 @@ if __name__ == '__main__':
     data_path: str = os.path.join('..', 'experiment_results', AGG_DIR)
 
     dataset_name: str
-    for dataset_name in ['14lap', '14res']:
+    for dataset_name in ['14lap', '14res', '15res', '16res']:
         print(dataset_name)
         path: str = os.path.join(data_path, dataset_name, SAVE_DIR)
         aggregate(path)

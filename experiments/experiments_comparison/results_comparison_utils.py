@@ -7,11 +7,11 @@ from os.path import join, exists
 from collections import defaultdict
 from typing import List, Dict, DefaultDict
 
-from .other_approach_results import OTHER_RESULTS
+from ASTE.experiments.experiments_comparison.other_approach_results import OTHER_RESULTS
 from ASTE.aste.utils import to_json
 
-datasets: List = ['14lap', '14res', '15res', '16res', 'ca', 'eu']
-AGG_DIR: str = 'sum_aggregation'
+datasets: List = ['14lap', '14res', '15res', '16res']
+AGG_DIR: str = 'endpoint'
 
 score_results_file_name: str = 'final_results.json'
 coverage_results_file_name: str = 'final_coverage_results.json'
@@ -92,7 +92,7 @@ if __name__ == '__main__':
     pd_coverages: pd.DataFrame = results_as_pandas(coverages)
 
     pd_scores.to_csv(join(results_path, 'all_scores_results.csv'))
-    pd_scores.to_csv(join(results_path, 'all_coverage_results.csv'))
+    pd_coverages.to_csv(join(results_path, 'all_coverage_results.csv'))
 
     print(pd_scores)
     print(pd_coverages)
