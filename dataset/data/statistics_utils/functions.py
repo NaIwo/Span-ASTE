@@ -1,6 +1,5 @@
-from ASTE.dataset.domain.const import ChunkCode, ASTELabels
+from ASTE.dataset.domain.const import ASTELabels
 from ASTE.dataset.domain.sentence import Sentence, Triplet, Span
-from ASTE.dataset.domain.chunk_label import get_chunk_label_from_sentence
 from .counter import StatsCounter
 
 import numpy as np

@@ -1,6 +1,6 @@
 from ASTE.utils import config
 from ASTE.dataset.reader import Batch
-from ASTE.dataset.domain.const import ChunkCode
+from ASTE.dataset.domain.const import SpanCode
 from ASTE.aste.models.specialty_models.spans.crf import CRF
 from ASTE.aste.tools.metrics import Metric, get_selected_metrics
 from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
@@ -49,15 +49,15 @@ class SpanCreatorModel(BaseModel):
         for best_path, sample in zip(best_paths, batch):
             best_path = torch.tensor(best_path).to(config['general']['device'])
             offset: int = sample.sentence_obj[0].encoder.offset
-            best_path[:offset] = ChunkCode.NOT_SPLIT
-            best_path[sum(sample.mask[0]) - offset:] = ChunkCode.NOT_SPLIT
+            best_path[:offset] = SpanCode.NOT_SPLIT
+            best_path[sum(sample.mask[0]) - offset:] = SpanCode.NOT_SPLIT
             results.append(self.get_spans_from_sequence(best_path, sample))
 
         return results
 
     @staticmethod
     def get_spans_from_sequence(seq: torch.Tensor, sample: Batch) -> torch.Tensor:
-        begins: torch.Tensor = torch.where(seq == ChunkCode.BEGIN_SPLIT)[0]
+        begins: torch.Tensor = torch.where(seq == SpanCode.BEGIN_SPLIT)[0]
         begins = torch.cat((begins, torch.tensor([len(seq)], device=config['general']['device'])))
         begins: List = [sample.sentence_obj[0].agree_index(idx) for idx in begins]
         results: List = list()
@@ -67,8 +67,8 @@ class SpanCreatorModel(BaseModel):
         end_idx: int
         for idx, b_idx in enumerate(begins[:-1]):
             s: torch.Tensor = seq[b_idx:begins[idx + 1]]
-            if ChunkCode.NOT_SPLIT in s:
-                end_idx = int(torch.where(s == ChunkCode.NOT_SPLIT)[0][0])
+            if SpanCode.NOT_SPLIT in s:
+                end_idx = int(torch.where(s == SpanCode.NOT_SPLIT)[0][0])
                 end_idx += b_idx - 1
             else:
                 end_idx = begins[idx + 1] - 1
