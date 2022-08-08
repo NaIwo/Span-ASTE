@@ -1,6 +1,6 @@
-from .domain import Sentence, get_chunk_label_from_sentence
+from .domain import Sentence, get_span_label_from_sentence
 from ASTE.utils import config
-from ASTE.dataset.domain.const import ChunkCode
+from ASTE.dataset.domain.const import SpanCode
 from ASTE.dataset.encoders import BaseEncoder, BertEncoder
 
 import torch
@@ -84,7 +84,7 @@ class DatasetLoader:
             encoded_sentences.append(torch.tensor(sample.encoded_sentence))
             aspect_spans.append(torch.tensor(sample.get_aspect_spans()))
             opinion_spans.append(torch.tensor(sample.get_opinion_spans()))
-            chunk_labels.append(torch.tensor(get_chunk_label_from_sentence(sample)))
+            chunk_labels.append(torch.tensor(get_span_label_from_sentence(sample)))
             sub_words_masks.append(torch.tensor(sample.sub_words_mask))
             lengths.append(sample.encoded_sentence_length)
 
@@ -92,7 +92,7 @@ class DatasetLoader:
         sentence_batch = pad_sequence(encoded_sentences, padding_value=0, batch_first=True)
         aspect_spans_batch = pad_sequence(aspect_spans, padding_value=-1, batch_first=True)
         opinion_spans_batch = pad_sequence(opinion_spans, padding_value=-1, batch_first=True)
-        chunk_batch = pad_sequence(chunk_labels, padding_value=ChunkCode.NOT_RELEVANT, batch_first=True)
+        chunk_batch = pad_sequence(chunk_labels, padding_value=SpanCode.NOT_RELEVANT, batch_first=True)
         sub_words_masks_batch = pad_sequence(sub_words_masks, padding_value=0, batch_first=True)
         mask: torch.Tensor = self._construct_mask(lengths)
         idx: torch.Tensor = torch.argsort(lengths, descending=True)

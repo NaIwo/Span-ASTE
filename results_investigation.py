@@ -6,7 +6,7 @@ from os.path import join
 
 if __name__ == '__main__':
     # You can perform investigation about your results by using ResultInvestigator class.
-    for dataset in ['14lap', '14res', '15res', '16res']:
+    for dataset in ['14lap']:
         label_path: str = join(getcwd(), 'dataset', 'data', 'ASTE_data_v2', dataset, 'test.txt')
         pred_path: str = join(getcwd(), 'results', f'{dataset}_res.txt')
 
@@ -27,4 +27,4 @@ if __name__ == '__main__':
         # Now you can compute the result and save to json or csv as well.
         investigator.compute()
         investigator.pprint()
-        investigator.to_pandas()
+        print(investigator.to_pandas())

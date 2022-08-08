@@ -5,7 +5,7 @@ from typing import Dict, DefaultDict
 
 from ASTE.aste.utils import to_json
 
-SAVE_DIR: str = ''
+SAVE_DIR: str = 'without_crf_sigmoid10'
 AGG_DIR: str = 'endpoint'
 
 
@@ -25,9 +25,9 @@ def aggregate(path: str) -> None:
             results['TripletRecall'] += result['triplet_metric']['SpanRecall']
             results['TripletF1'] += result['triplet_metric']['SpanF1']
 
-            coverage_results['Precision'] += result['chunker_metrics']['SpanPrecision']
-            coverage_results['Recall'] += result['chunker_metrics']['SpanRecall']
-            coverage_results['F1'] += result['chunker_metrics']['SpanF1']
+            coverage_results['Precision'] += result['span_creator_metrics']['SpanPrecision']
+            coverage_results['Recall'] += result['span_creator_metrics']['SpanRecall']
+            coverage_results['F1'] += result['span_creator_metrics']['SpanF1']
 
         elif 'coverage_results' in file_name:
             num_of_coverage_files += 1
