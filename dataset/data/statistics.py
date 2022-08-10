@@ -185,7 +185,7 @@ class ResultInvestigator:
             self.advanced_result_stats_func: Dict = default_advanced_result_stats_func
         else:
             self.advanced_result_stats_func: Dict = advanced_result_stats_func
-        self.advanced_result_stats: Dict = dict.fromkeys(self.advanced_result_stats_func.keys(), list())
+        self.advanced_result_stats: Dict = {key: list() for key in self.advanced_result_stats_func.keys()}
 
     def compute(self) -> None:
         self.original_data_stats.compute()
