@@ -26,14 +26,14 @@ class DatasetStatistics:
 
         self.dataset: ASTEDataset = dataset
         self.statistics_func: Dict = default_statistics_func if statistics_func is None else statistics_func
-        self.statistics: Dict = dict.fromkeys(self.statistics_func.keys(), StatsCounter())
+        self.statistics: Dict = {key: StatsCounter() for key in self.statistics_func.keys()}
 
         if phrases_to_count is None:
             self.phrases_to_count: List = ['not', "n't"]
             self.phrases_func: Dict = default_phrases_func if phrases_func is None else phrases_func
             key: str
             for key in self.phrases_func.keys():
-                self.statistics[key] = dict.fromkeys(self.phrases_to_count, StatsCounter())
+                self.statistics[key] = {key: StatsCounter() for key in self.phrases_to_count}
 
     def compute(self) -> Dict:
         self.computed = True
@@ -180,7 +180,8 @@ class ResultInvestigator:
         self.original_data: ASTEDataset = original_data
 
         self.result_stats_func: Dict = default_results_func if result_stats_func is None else result_stats_func
-        self.result_stats: Dict = dict.fromkeys(self.result_stats_func.keys(), StatsCounter())
+        self.result_stats: Dict = {key: StatsCounter() for key in self.result_stats_func.keys()}
+
         if advanced_result_stats_func is None:
             self.advanced_result_stats_func: Dict = default_advanced_result_stats_func
         else:
