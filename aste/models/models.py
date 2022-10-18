@@ -26,7 +26,7 @@ class BertBaseModel(BaseModel):
         super(BertBaseModel, self).__init__(model_name)
         self.emb_layer: BaseEmbedding = BertWithAggregation()
         self.span_creator: BaseModel = SpanCreatorModel(input_dim=self.emb_layer.embedding_dim)
-        self.aggregator: BaseAggregator = RnnAggregator(input_dim=self.emb_layer.embedding_dim, bidirectional=True)
+        self.aggregator: BaseAggregator = RnnAggregator(input_dim=self.emb_layer.embedding_dim)
         self.span_selector: BaseModel = Selector(input_dim=self.aggregator.output_dim)
         self.triplets_extractor: BaseModel = TripletExtractorModel(input_dim=self.aggregator.output_dim)
 

@@ -1,6 +1,7 @@
 from typing import List, Optional, Callable
 
 import torch
+from torch import Tensor
 
 from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
 from ASTE.aste.models.specialty_models.spans.crf import CRF
@@ -23,19 +24,19 @@ class SpanCreatorModel(BaseModel):
 
         self.input_dim: int = input_dim
 
-        self.crf = CRF(num_tags=3, batch_first=True)
+        self.crf = CRF(num_tags=5, batch_first=True)
         self.linear_layer = torch.nn.Linear(input_dim, input_dim // 2)
-        self.final_layer = torch.nn.Linear(input_dim // 2, 3)
+        self.final_layer = torch.nn.Linear(input_dim // 2, 5)
 
-    def forward(self, data: torch.Tensor) -> torch.Tensor:
+    def forward(self, data: Tensor) -> Tensor:
         return self.get_features(data)
 
-    def get_features(self, data: torch.Tensor) -> torch.Tensor:
+    def get_features(self, data: Tensor) -> Tensor:
         out = self.linear_layer(data)
         return self.final_layer(out)
 
-    def get_spans(self, data: torch.Tensor, batch: Batch) -> List[torch.Tensor]:
-        results: List[torch.Tensor] = list()
+    def get_spans(self, data: Tensor, batch: Batch) -> List[Tensor]:
+        results: List[Tensor] = list()
         best_paths: List[List[int]] = self.crf.decode(data, mask=batch.emb_mask[:, :data.shape[1], ...])
 
         for best_path, sample in zip(best_paths, batch):
@@ -47,8 +48,10 @@ class SpanCreatorModel(BaseModel):
 
         return results
 
-    def get_spans_from_sequence(self, seq: torch.Tensor, sample: Batch) -> torch.Tensor:
-        begins: torch.Tensor = torch.where(seq == SpanCode.BEGIN_SPLIT)[0]
+    def get_spans_from_sequence(self, seq: Tensor, sample: Batch) -> Tensor:
+        seq = torch.where(seq == SpanCode.BEGIN_ASPECT, SpanCode.BEGIN_SPLIT, seq)
+        seq = torch.where(seq == SpanCode.BEGIN_OPINION, SpanCode.BEGIN_SPLIT, seq)
+        begins: Tensor = torch.where(seq == SpanCode.BEGIN_SPLIT)[0]
         begins = torch.cat((begins, torch.tensor([len(seq)], device=config['general']['device'])))
         begins: List = [sample.sentence_obj[0].agree_index(idx) for idx in begins]
         results: List[List[int, int]] = list()
@@ -57,7 +60,7 @@ class SpanCreatorModel(BaseModel):
         b_idx: int
         end_idx: int
         for idx, b_idx in enumerate(begins[:-1]):
-            s: torch.Tensor = seq[b_idx:begins[idx + 1]]
+            s: Tensor = seq[b_idx:begins[idx + 1]]
             if SpanCode.NOT_SPLIT in s:
                 end_idx = int(torch.where(s == SpanCode.NOT_SPLIT)[0][0])
                 end_idx += b_idx - 1
@@ -106,7 +109,7 @@ class SpanCreatorModel(BaseModel):
     def update_metrics(self, model_out: ModelOutput) -> None:
         b: Batch = model_out.batch
         for pred, aspect, opinion in zip(model_out.predicted_spans, b.aspect_spans, b.opinion_spans):
-            true: torch.Tensor = torch.cat([aspect, opinion], dim=0).unique(dim=0)
+            true: Tensor = torch.cat([aspect, opinion], dim=0).unique(dim=0)
             true_count: int = true.shape[0] - int(-1 in true)
             self.metrics(pred, true, true_count)
 
