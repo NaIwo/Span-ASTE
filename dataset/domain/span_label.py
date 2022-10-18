@@ -5,7 +5,7 @@ import numpy as np
 
 
 def get_span_label_from_sentence(sentence: Sentence) -> np.ndarray:
-    chunk: np.ndarray = np.full(shape=sentence.encoded_sentence_length, fill_value=SpanCode.NOT_SPLIT)
+    chunk: np.ndarray = np.full(shape=sentence.emb_sentence_length, fill_value=SpanCode.NOT_SPLIT)
 
     def fill_span(start_idx: int, end_idx: int):
         chunk[start_idx:end_idx] = SpanCode.SPLIT
