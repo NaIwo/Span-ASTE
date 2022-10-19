@@ -20,7 +20,7 @@ class SpanCreatorModel(BaseModel):
 
         self.extend_spans: Optional[List[int]] = extend_spans
         if extend_spans is None:
-            self.extend_spans: List[int] = [-1, 1]
+            self.extend_spans: List[int] = []
 
         self.input_dim: int = input_dim
 

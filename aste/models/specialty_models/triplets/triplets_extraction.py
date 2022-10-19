@@ -31,7 +31,7 @@ class TripletExtractorModel(BaseModel):
         self.linear_layer_3 = torch.nn.Linear(100, 100)
         # 3 is responsible for aspect, opinion, and not_pair
         self.final_layer = torch.nn.Linear(100, config['dataset']['number-of-polarities'] + 3)
-        self.crf = CRF()
+        # self.crf = CRF()
         self.dropout = torch.nn.Dropout(0.1)
         self.batch_norm = torch.nn.BatchNorm2d(input_dimension)
         self.final_batch_norm = torch.nn.BatchNorm2d(100)
@@ -52,7 +52,7 @@ class TripletExtractorModel(BaseModel):
         matrix_data = torch.permute(matrix_data, (0, 2, 3, 1))
 
         matrix_data = self.final_layer(matrix_data)
-        matrix_data = self.crf(matrix_data)
+        # matrix_data = self.crf(matrix_data)
 
         predictions: torch.Tensor = self.softmax(matrix_data)
 
