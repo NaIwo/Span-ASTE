@@ -21,7 +21,7 @@ model:
   selector:
     dice-loss-alpha: 0.5
     loss-weight: 1.0
-    sigmoid-multiplication: 4. # In the training phase of the full model, increase the importance of the sigmoid input
+    sigmoid-multiplication: 2. # In the training phase of the full model, increase the importance of the sigmoid input
                                 # [sigmoid(value * neuron)] -
                                 # more drastic incorrect span omitting
   triplet-extractor:
