@@ -1,2 +1,2 @@
-from .bert_encoder import BertEncoder, BertEncoderWithoutSubwords
+from .transformer_encoder import TransformerEncoder, TransformerEncoderWithoutSubwords
 from .base_encoder import BaseEncoder

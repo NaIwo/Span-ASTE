@@ -2,7 +2,7 @@ from typing import List
 
 import torch
 from torch import Tensor
-from transformers import BertModel
+from transformers import BertModel, DebertaModel
 
 from ASTE.dataset.reader import Batch
 from ASTE.utils import config
@@ -10,27 +10,27 @@ from .base_embeddings import BaseEmbedding
 from ..span_aggregators import RnnAggregator, BaseAggregator
 
 
-class Bert(BaseEmbedding):
-    def __init__(self, model_name: str = 'Bert embedding model'):
-        dim: int = config['encoder']['bert']['embedding-dimension']
-        super(Bert, self).__init__(embedding_dim=dim, model_name=model_name)
-        self.model: BertModel = BertModel.from_pretrained(config['model']['bert']['source'])
+class Transformer(BaseEmbedding):
+    def __init__(self, model_name: str = 'Transformer embedding model'):
+        dim: int = config['encoder']['transformer']['embedding-dimension']
+        super(Transformer, self).__init__(embedding_dim=dim, model_name=model_name)
+        self.model: DebertaModel = DebertaModel.from_pretrained(config['model']['transformer']['source'])
 
     def forward(self, batch: Batch, *args, **kwargs) -> Tensor:
         return self.model.forward(batch.sentence, batch.mask).last_hidden_state
 
 
-class BertWithAggregation(BaseEmbedding):
-    def __init__(self, model_name: str = 'Bert with embedding aggregation model'):
-        dim: int = config['encoder']['bert']['embedding-dimension']
-        super(BertWithAggregation, self).__init__(embedding_dim=dim, model_name=model_name)
-        self.model: BertModel = BertModel.from_pretrained(config['model']['bert']['source'])
+class TransformerWithAggregation(BaseEmbedding):
+    def __init__(self, model_name: str = 'Transformer with embedding aggregation model'):
+        dim: int = config['encoder']['transformer']['embedding-dimension']
+        super(TransformerWithAggregation, self).__init__(embedding_dim=dim, model_name=model_name)
+        self.model: DebertaModel = DebertaModel.from_pretrained(config['model']['transformer']['source'])
         self.aggregator: BaseAggregator = RnnAggregator(input_dim=dim, model_name='RNN Bert Aggregator', num_layers=2)
 
     def forward(self, batch: Batch, *args, **kwargs) -> Tensor:
-        bert_emb: Tensor = self.model.forward(batch.sentence, batch.mask).last_hidden_state
+        emb: Tensor = self.model.forward(batch.sentence, batch.mask).last_hidden_state
         spans: List[Tensor] = self.construct_spans_ranges(batch)
-        return self.aggregator.aggregate(bert_emb, spans)
+        return self.aggregator.aggregate(emb, spans)
 
     @staticmethod
     def construct_spans_ranges(batch: Batch) -> List[Tensor]:

@@ -1,7 +1,7 @@
 from ast import literal_eval
 from typing import List, Tuple, TypeVar, Optional
 
-from ASTE.dataset.encoders import BaseEncoder, BertEncoder
+from ASTE.dataset.encoders import BaseEncoder, TransformerEncoder
 
 S = TypeVar('S', bound='Span')
 T = TypeVar('T', bound='Triplet')
@@ -11,7 +11,7 @@ class Sentence:
     SEP: str = '#### #### ####'
 
     def __init__(self, raw_sentence: str,
-                 encoder: BaseEncoder = BertEncoder(),
+                 encoder: BaseEncoder = TransformerEncoder(),
                  include_sub_words_info_in_mask: bool = True):
         self.encoder: BaseEncoder = encoder
         self.raw_line: str = raw_sentence

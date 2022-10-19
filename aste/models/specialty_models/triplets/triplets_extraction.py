@@ -26,9 +26,10 @@ class TripletExtractorModel(BaseModel):
         self.final_metrics: Metric = Metric(name='Final predictions', metrics=metrics).to(config['general']['device'])
 
         input_dimension: int = input_dim * 2
-        self.linear_layer_1 = torch.nn.Linear(input_dimension, 300)
-        self.linear_layer_2 = torch.nn.Linear(300, 100)
-        self.linear_layer_3 = torch.nn.Linear(100, 100)
+        self.linear_layer_1 = torch.nn.Linear(input_dimension, 500)
+        self.linear_layer_2 = torch.nn.Linear(500, 300)
+        self.linear_layer_3 = torch.nn.Linear(300, 100)
+        self.linear_layer_4 = torch.nn.Linear(100, 100)
         # 3 is responsible for aspect, opinion, and not_pair
         self.final_layer = torch.nn.Linear(100, config['dataset']['number-of-polarities'] + 3)
         self.crf = CRF()
@@ -43,7 +44,7 @@ class TripletExtractorModel(BaseModel):
         matrix_data = torch.permute(matrix_data, (0, 2, 3, 1))
 
         layer: torch.nn.Linear
-        for layer in [self.linear_layer_1, self.linear_layer_2, self.linear_layer_3]:
+        for layer in [self.linear_layer_1, self.linear_layer_2, self.linear_layer_3, self.linear_layer_4]:
             matrix_data = layer(matrix_data)
             matrix_data = torch.relu(matrix_data)
             matrix_data = self.dropout(matrix_data)

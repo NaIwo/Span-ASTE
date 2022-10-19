@@ -10,9 +10,9 @@ from .base_embeddings import BaseEmbedding
 
 class WeightedBert(BaseEmbedding):
     def __init__(self, model_name: str = 'Bert embedding (all layers) model'):
-        dim: int = config['encoder']['bert']['embedding-dimension']
+        dim: int = config['encoder']['transformer']['embedding-dimension']
         super(WeightedBert, self).__init__(embedding_dim=dim, model_name=model_name)
-        self.model: BertModel = BertModel.from_pretrained(config['model']['bert']['source'])
+        self.model: BertModel = BertModel.from_pretrained(config['model']['transformer']['source'])
 
         self.linear_layer_1 = torch.nn.Linear(dim, 500)
         self.linear_layer_2 = torch.nn.Linear(500, 300)

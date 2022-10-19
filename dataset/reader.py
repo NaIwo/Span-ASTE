@@ -12,7 +12,7 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 from ASTE.dataset.domain.const import SpanCode
-from ASTE.dataset.encoders import BaseEncoder, BertEncoder
+from ASTE.dataset.encoders import BaseEncoder, TransformerEncoder
 from ASTE.utils import config
 from .domain import Sentence, get_span_label_from_sentence
 
@@ -21,7 +21,7 @@ ASTE = TypeVar('ASTE', bound='ASTEDataset')
 
 class ASTEDataset(Dataset):
     def __init__(self, data_path: Union[str, List[str]],
-                 encoder: BaseEncoder = BertEncoder(),
+                 encoder: BaseEncoder = TransformerEncoder(),
                  include_sub_words_info_in_mask: bool = True):
         self.sentences: List[Sentence] = list()
 
@@ -61,7 +61,7 @@ class ASTEDataset(Dataset):
 
 class DatasetLoader:
     def __init__(self, data_path: str,
-                 encoder: BaseEncoder = BertEncoder(),
+                 encoder: BaseEncoder = TransformerEncoder(),
                  include_sub_words_info_in_mask: bool = True):
 
         self.data_path: str = data_path

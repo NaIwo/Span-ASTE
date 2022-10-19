@@ -18,5 +18,6 @@ class BaseEncoder:
         word: str
         for word in sentence.strip().split():
             encoded_words.append(self.encode_single_word(word))
-
+            self.encoder.add_prefix_space = True
+        self.encoder.add_prefix_space = False
         return encoded_words

@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
-from ASTE.aste.models.model_elements.embeddings import Bert, BaseEmbedding, WeightedBert, BertWithAggregation
+from ASTE.aste.models.model_elements.embeddings import Transformer, BaseEmbedding, WeightedBert, TransformerWithAggregation
 from ASTE.aste.models.model_elements.span_aggregators import (
     BaseAggregator,
     EndPointAggregator,
@@ -24,7 +24,7 @@ class BertBaseModel(BaseModel):
     def __init__(self, model_name='Bert Base Model', *args, **kwargs):
 
         super(BertBaseModel, self).__init__(model_name)
-        self.emb_layer: BaseEmbedding = BertWithAggregation()
+        self.emb_layer: BaseEmbedding = TransformerWithAggregation()
         self.span_creator: BaseModel = SpanCreatorModel(input_dim=self.emb_layer.embedding_dim)
         self.aggregator: BaseAggregator = RnnAggregator(input_dim=self.emb_layer.embedding_dim)
         self.span_selector: BaseModel = Selector(input_dim=self.aggregator.output_dim)
@@ -95,7 +95,7 @@ class BertBaseModel(BaseModel):
             {'params': self.aggregator.parameters(), 'lr': config['model']['learning-rate']},
             {'params': self.span_selector.parameters(), 'lr': config['model']['learning-rate']},
             {'params': self.triplets_extractor.parameters(), 'lr': config['model']['learning-rate']},
-            {'params': self.emb_layer.parameters(), 'lr': config['model']['bert']['learning-rate']}
+            {'params': self.emb_layer.parameters(), 'lr': config['model']['transformer']['learning-rate']}
         ]
 
     def update_trainable_parameters(self) -> None:
