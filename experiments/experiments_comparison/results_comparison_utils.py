@@ -7,8 +7,8 @@ from os.path import join, exists
 from collections import defaultdict
 from typing import List, Dict, DefaultDict
 
-from ASTE.experiments.experiments_comparison.other_approach_results import OTHER_RESULTS
-from ASTE.aste.utils import to_json
+from .other_approach_results import OTHER_RESULTS
+from aste.utils import to_json
 
 datasets: List = ['14lap', '14res', '15res', '16res']
 AGG_DIR: str = 'endpoint'

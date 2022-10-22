@@ -1,16 +1,18 @@
+import torch
+from aste.utils import config
+from torch import Tensor
 from transformers import BertModel
 from transformers.modeling_outputs import BaseModelOutputWithPoolingAndCrossAttentions as EmbOut
-import torch
 
-from ASTE.utils import config
 from .base_embeddings import BaseEmbedding
+from ....dataset.reader import Batch
 
 
 class WeightedBert(BaseEmbedding):
     def __init__(self, model_name: str = 'Bert embedding (all layers) model'):
-        dim: int = config['encoder']['bert']['embedding-dimension']
+        dim: int = config['encoder']['transformer']['embedding-dimension']
         super(WeightedBert, self).__init__(embedding_dim=dim, model_name=model_name)
-        self.model: BertModel = BertModel.from_pretrained(config['model']['bert']['source'])
+        self.model: BertModel = BertModel.from_pretrained(config['model']['transformer']['source'])
 
         self.linear_layer_1 = torch.nn.Linear(dim, 500)
         self.linear_layer_2 = torch.nn.Linear(500, 300)
@@ -20,17 +22,17 @@ class WeightedBert(BaseEmbedding):
         self.batch_norm = torch.nn.BatchNorm1d(dim)
         self.softmax = torch.nn.Softmax(dim=-1)
 
-    def forward(self, inputs: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        emb_out: EmbOut = self.model.forward(inputs, mask, output_hidden_states=True)
-        embeddings: torch.Tensor = torch.stack(emb_out.hidden_states, dim=1)
+    def forward(self, batch: Batch, *args, **kwargs) -> Tensor:
+        emb_out: EmbOut = self.model.forward(batch.sentence, batch.mask, output_hidden_states=True)
+        embeddings: Tensor = torch.stack(emb_out.hidden_states, dim=1)
 
-        attention: torch.Tensor = self._get_attention_weights(embeddings)
+        attention: Tensor = self._get_attention_weights(embeddings)
         embeddings = attention[..., None, None] * embeddings
 
         return torch.sum(embeddings, dim=1)
 
-    def _get_attention_weights(self, embeddings: torch.Tensor) -> torch.Tensor:
-        attention: torch.Tensor = embeddings[:, :, 0, :]
+    def _get_attention_weights(self, embeddings: Tensor) -> Tensor:
+        attention: Tensor = embeddings[:, :, 0, :]
         attention = self.batch_norm(torch.permute(attention, (0, 2, 1)))
         attention = torch.permute(attention, (0, 2, 1))
 

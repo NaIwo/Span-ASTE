@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ASTE.utils import config
+from aste.utils import config
 
 '''
 Implementation taken from: 

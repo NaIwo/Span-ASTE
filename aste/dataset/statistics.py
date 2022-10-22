@@ -1,19 +1,27 @@
-from ASTE.dataset.reader import ASTEDataset
-from ASTE.dataset.domain.sentence import Sentence
-from ASTE.dataset.data.statistics_utils import (
+import json
+import os
+from collections import defaultdict, Counter
+from typing import Dict, List, Optional, Callable, Tuple, DefaultDict, Union, TypeVar
+
+import pandas as pd
+from tqdm import tqdm
+
+from .domain import Sentence
+from .reader import ASTEDataset
+from .statistics_utils import (
     default_statistics_func,
     default_phrases_func,
     default_results_func,
     default_advanced_result_stats_func,
     StatsCounter)
-from ASTE.experiments.experiments_comparison.results_comparison_utils import results_as_pandas
 
-import os
-import json
-import pandas as pd
-from tqdm import tqdm
-from collections import defaultdict, Counter
-from typing import Dict, List, Optional, Callable, Tuple, DefaultDict, Union, TypeVar
+
+def results_as_pandas(results, orient: str = 'index') -> pd.DataFrame:
+    pd_results = pd.DataFrame.from_dict({(i, j): results[i][j]
+                                         for i in results.keys()
+                                         for j in results[i].keys()},
+                                        orient=orient, dtype='float')
+    return pd_results
 
 
 class DatasetStatistics:

@@ -14,6 +14,8 @@ Embedding of words are obtained thanks to BERT and embedding of phrases are aggr
 #### Quick install
 ```
 pip install -r requirements.txt
+or
+pip install .
 ```
 
 #### Dataset statistics
@@ -23,15 +25,20 @@ In addition, you can examine the predictions and compare the results with the la
 See example: [results_investigation.py](./results_investigation.py)
 
 #### Dataset preparation
+
 ```python
 import os
-from ASTE.dataset.reader import DatasetLoader
+from aste.dataset.reader import DatasetLoader
 
 dataset_name: str = '14lap'
 data_path: str = os.path.join(os.getcwd(), 'dataset', 'data', 'ASTE_data_v2', dataset_name)
 
 # Create dataset reader. Path should point out directory with data - NOT EXACT DATA FILE
 dataset_reader = DatasetLoader(data_path=data_path)
+# If you do not want to include sub-word elements in mask pass include_sub_words_info_in_mask=False
+# BUT make sure that the embedding model also take this into account 
+# (aggregate embeddings from sub-words or do not generate such situations)
+dataset_reader = DatasetLoader(data_path=data_path, include_sub_words_info_in_mask=False)
 
 # Load data. Here, you should point to extract file with data.
 train_data = dataset_reader.load('train.txt')
@@ -44,13 +51,20 @@ If you want to track them, see the example in the file: [model_examples.py](./mo
 where we discuss how to add 'experiments tracker'.
 
 #### Setup trainer
+
 ```python
-from ASTE.aste.trainer import Trainer
-from ASTE.aste.models import BaseModel, BertBaseModel
+from aste.trainer import Trainer
+from aste.models import BaseModel, TransformerBaseModel
 
 # Get Model. You can create your own definition or update existing one.
 # BertBase model is our provided implementation which obtain best results so far.
-model: BaseModel = BertBaseModel()
+model: BaseModel = TransformerBaseModel()
+# here you can change model elements (as defined in aste/model/models.py)
+model.emb_layer: BaseEmbedding = ...
+model.span_creator: BaseModel = ...
+model.aggregator: BaseAggregator = ...
+model.span_selector: BaseModel = ...
+model.triplets_extractor: BaseModel = ...
 
 # Define trainer - Wrapper for model handling.
 trainer: Trainer = Trainer(model=model, tracker=tracker, save_path=save_path)
@@ -74,7 +88,7 @@ results: Dict = trainer.test(test_data)
 
 #### Saving the results
 ```python
-from ASTE.aste.models import ModelMetric
+from aste.models import ModelMetric
 
 results: Dict = trainer.test(test_data)
 # You can also save the results. Just type:
@@ -83,9 +97,10 @@ results[ModelMetric.NAME].to_json(path=save_path_json)
 ```
 
 #### Querying the model
+
 ```python
-from ASTE.aste.models import ModelOutput
-from ASTE.dataset.domain.sentence import Sentence
+from aste.models import ModelOutput
+from aste.dataset.domain import Sentence
 
 # If you want to feed the model with your own sentence. 
 # You should include the correct tokenization of the sentence (we are not handling that at the moment).
@@ -99,7 +114,8 @@ prediction.save('sentence_result.txt')
 You can find usage examples in the file [model_examples.py](./model_examples.py)
 
 ### Configuration
-You can adapt model configuration for your sepecific task in [config](./config.yml) file.
+You can adapt model configuration for your specific task by creation your own [config.yml](./aste/config.yml) file and put it 
+to the cwd directory. If you don't provide this file, the default one will be taken.
 
 ## Datasets
 Results obtained on [ASTE_V2](https://aclanthology.org/2020.emnlp-main.183.pdf) 

@@ -1,6 +1,6 @@
 from typing import Any
 
-from ASTE.aste.models import BaseModel
+from ....models import BaseModel
 
 
 class BaseEmbedding(BaseModel):

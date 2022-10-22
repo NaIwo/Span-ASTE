@@ -1,14 +1,14 @@
-from ASTE.utils import config
-from ASTE.dataset.reader import Batch
-from ASTE.dataset.domain.const import ASTELabels
-from .crf_model import CRF
-from ASTE.aste.tools.metrics import Metric, get_selected_metrics
-from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
-
-import torch
-from torch.nn import CrossEntropyLoss
 from functools import lru_cache
 from typing import Tuple, List, Dict
+
+import torch
+from aste.utils import config
+from torch.nn import CrossEntropyLoss
+
+from ....dataset.domain import ASTELabels
+from ....dataset.reader import Batch
+from ....models import ModelOutput, ModelLoss, ModelMetric, BaseModel
+from ....tools.metrics import Metric, get_selected_metrics
 
 
 class TripletExtractorModel(BaseModel):
@@ -30,7 +30,7 @@ class TripletExtractorModel(BaseModel):
         self.linear_layer_3 = torch.nn.Linear(100, 100)
         # 3 is responsible for aspect, opinion, and not_pair
         self.final_layer = torch.nn.Linear(100, config['dataset']['number-of-polarities'] + 3)
-        self.crf = CRF()
+        # self.crf = CRF()
         self.dropout = torch.nn.Dropout(0.1)
         self.batch_norm = torch.nn.BatchNorm2d(input_dimension)
         self.final_batch_norm = torch.nn.BatchNorm2d(100)
@@ -49,9 +49,13 @@ class TripletExtractorModel(BaseModel):
 
         matrix_data = self.final_batch_norm(torch.permute(matrix_data, (0, 3, 1, 2)))
         matrix_data = torch.permute(matrix_data, (0, 2, 3, 1))
+
         matrix_data = self.final_layer(matrix_data)
-        matrix_data = self.crf(matrix_data)
-        return self.softmax(matrix_data)
+        # matrix_data = self.crf(matrix_data)
+
+        predictions: torch.Tensor = self.softmax(matrix_data)
+
+        return self.agree_predictions(predictions)
 
     @staticmethod
     def construct_matrix(data: torch.Tensor) -> torch.Tensor:
@@ -59,6 +63,32 @@ class TripletExtractorModel(BaseModel):
         data_col: torch.Tensor = data.unsqueeze(1).expand(-1, max_len, -1, -1)
         data_row: torch.Tensor = data.unsqueeze(2).expand(-1, -1, max_len, -1)
         return torch.cat([data_col, data_row], dim=-1)
+
+    @staticmethod
+    def agree_predictions(matrix_data: torch.Tensor) -> torch.Tensor:
+        m_shape = matrix_data.shape
+        mask = torch.eye(m_shape[1]).repeat(m_shape[0], 1, 1, 1).permute(0, 2, 3, 1).bool()
+        mask = mask.to(config['general']['device'])
+
+        elements: List[int] = [ASTELabels.NEG, ASTELabels.POS, ASTELabels.NEU]
+        matrix_data = TripletExtractorModel._agree_predictions_specific_part(matrix_data, mask, elements)
+
+        elements: List[int] = [ASTELabels.ASPECT, ASTELabels.OPINION]
+        matrix_data = TripletExtractorModel._agree_predictions_specific_part(matrix_data, ~mask, elements)
+
+        return matrix_data
+
+    @staticmethod
+    def _agree_predictions_specific_part(matrix_data: torch.Tensor, mask: torch.Tensor, elements: List[int]):
+        matrix_data_copy: torch.Tensor = torch.clone(matrix_data)
+        zero: torch.Tensor = torch.tensor([0.], device=config['general']['device'])
+        element: int
+        for element in elements:
+            matrix_data_copy[..., element] = zero
+        diag_matrix: torch.Tensor = torch.where(mask, matrix_data_copy, zero)
+        normalizer: torch.Tensor = torch.sum(diag_matrix, dim=-1, keepdim=True)
+        diag_matrix = diag_matrix / normalizer
+        return torch.where(mask, diag_matrix, matrix_data)
 
     def get_loss(self, model_out: ModelOutput) -> ModelLoss:
         true_labels: torch.Tensor = self.construct_matrix_labels(model_out.batch, tuple(model_out.predicted_spans))
@@ -107,7 +137,6 @@ class TripletExtractorModel(BaseModel):
 
     @staticmethod
     def fill_one_dim_matrix(sample: Batch, labels_matrix: torch.Tensor, predicted_spans: torch.Tensor) -> None:
-
         # TODO make it more readable and add docs
         def check_for_second_element_and_fill_if_necessary(sec_pair: str) -> None:
             assert sec_pair in ('aspect', 'opinion'), f'Invalid second pair source: {sec_pair}!'

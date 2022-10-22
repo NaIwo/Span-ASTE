@@ -1,6 +1,8 @@
-import torch
-from torch.nn import Module
 from typing import List
+
+import torch
+from torch import Tensor
+from torch.nn import Module
 
 from .base_agg import BaseAggregator
 
@@ -15,11 +17,11 @@ class SumAggregator(BaseAggregator, Module):
     def output_dim(self):
         return self._out_dim
 
-    def _get_agg_sentence_embeddings(self, sentence_embeddings: torch.Tensor, sentence_spans: torch.Tensor) -> List:
+    def _get_agg_sentence_embeddings(self, sentence_embeddings: Tensor, sentence_spans: Tensor) -> Tensor:
         sentence_agg_embeddings: List = list()
-        span: torch.Tensor
+        span: Tensor
         for span in sentence_spans:
-            span_emb: torch.Tensor = sentence_embeddings[span[0]:span[1]+1]
-            agg_emb: torch.Tensor = torch.sum(span_emb, dim=0)
+            span_emb: Tensor = sentence_embeddings[span[0]:span[1] + 1]
+            agg_emb: Tensor = torch.sum(span_emb, dim=0)
             sentence_agg_embeddings.append(agg_emb)
-        return sentence_agg_embeddings
+        return torch.stack(sentence_agg_embeddings, dim=0)

@@ -6,7 +6,7 @@ from torchmetrics import MetricCollection
 from torchmetrics import Metric as TorchMetric
 from torchmetrics import FBetaScore, Accuracy, Precision, Recall, F1Score
 
-from ASTE.aste.utils import ignore_index
+from aste.utils import ignore_index
 
 
 class Metric(MetricCollection):

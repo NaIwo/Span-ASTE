@@ -27,7 +27,7 @@ import torch.nn.functional as F
 from torch import Tensor
 from typing import Optional
 
-from ASTE.aste.utils import ignore_index
+from aste.utils import ignore_index
 
 
 class DiceLoss(nn.Module):

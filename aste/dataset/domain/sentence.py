@@ -1,7 +1,7 @@
-from ASTE.dataset.encoders import BaseEncoder, BertEncoder
-
 from ast import literal_eval
 from typing import List, Tuple, TypeVar, Optional
+
+from ..encoders import BaseEncoder, TransformerEncoder
 
 S = TypeVar('S', bound='Span')
 T = TypeVar('T', bound='Triplet')
@@ -10,7 +10,9 @@ T = TypeVar('T', bound='Triplet')
 class Sentence:
     SEP: str = '#### #### ####'
 
-    def __init__(self, raw_sentence: str, encoder: BaseEncoder = BertEncoder()):
+    def __init__(self, raw_sentence: str,
+                 encoder: BaseEncoder = TransformerEncoder(),
+                 include_sub_words_info_in_mask: bool = True):
         self.encoder: BaseEncoder = encoder
         self.raw_line: str = raw_sentence
         splitted_sentence: List = raw_sentence.strip().split(Sentence.SEP)
@@ -23,17 +25,37 @@ class Sentence:
 
         self.encoded_sentence: List[int] = self.encoder.encode(sentence=self.sentence)
         self.encoded_words_in_sentence: List = self.encoder.encode_word_by_word(sentence=self.sentence)
-        self.sub_words_lengths: List[int] = list()
-        self.sub_words_mask: List[int] = list()
-        word: List[int]
-        for word in self.encoded_words_in_sentence:
-            self.sub_words_lengths.append(len(word) - 1)
-            self.sub_words_mask += [1] + [0] * (len(word) - 1)
-        offset: List[int] = [0] * self.encoder.offset
-        self.sub_words_mask = offset + self.sub_words_mask + offset
+
+        self.include_sub_words_info_in_mask: bool = include_sub_words_info_in_mask
+
+        self._sub_words_lengths: List[int] = list()
+        self._true_sub_words_lengths: List[int] = list()
+        self._sub_words_mask: List[int] = list()
+        self._true_sub_words_mask: List[int] = list()
+
+        self._fill_sub_words_information()
 
         self.sentence_length: int = len(self.sentence.split())
         self.encoded_sentence_length: int = len(self.encoded_sentence)
+        self.emb_sentence_length: int = len(self._sub_words_mask)
+
+    def _fill_sub_words_information(self):
+        word: List[int]
+        for word in self.encoded_words_in_sentence:
+            len_sub_word: int = len(word) - 1
+
+            self._sub_words_lengths.append(len_sub_word * int(self.include_sub_words_info_in_mask))
+            self._true_sub_words_lengths.append(len_sub_word)
+
+            self._sub_words_mask += [1] + ([0] * (len_sub_word * int(self.include_sub_words_info_in_mask)))
+            self._true_sub_words_mask += [1] + [0] * len_sub_word
+
+        offset: List[int] = [0] * self.encoder.offset
+        self._sub_words_mask = offset + self._sub_words_mask + offset
+        self._true_sub_words_mask = offset + self._true_sub_words_mask + offset
+
+    def get_sub_words_mask(self, force_true_mask: bool = False):
+        return self._true_sub_words_mask if force_true_mask else self._sub_words_mask
 
     def get_aspect_spans(self) -> List[Tuple[int, int]]:
         return self._get_selected_spans('aspect_span')
@@ -54,10 +76,14 @@ class Sentence:
         return spans
 
     def get_index_after_encoding(self, idx: int) -> int:
-        return self.encoder.offset + idx + sum(self.sub_words_lengths[:idx])
+        if idx < 0 or idx >= self.sentence_length:
+            return -1
+        return self.encoder.offset + idx + sum(self._sub_words_lengths[:idx])
 
     def get_index_before_encoding(self, idx: int) -> int:
-        return sum(self.sub_words_mask[:idx])
+        if idx < 0 or idx >= self.emb_sentence_length:
+            return -1
+        return sum(self._sub_words_mask[:idx])
 
     def agree_index(self, idx: int) -> int:
         return self.get_index_after_encoding(self.get_index_before_encoding(idx))

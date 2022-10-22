@@ -1,10 +1,9 @@
-from ASTE.dataset.reader import DatasetLoader
-from ASTE.utils import set_up_logger, config
-from ASTE.aste.trainer import Trainer
-from ASTE.aste.models import BaseModel, BertBaseModel
-from ASTE.aste.tools import WandbTracker, BaseTracker
-from ASTE.aste.models import ModelMetric, ModelLoss, ModelOutput
-from ASTE.aste.utils import to_json
+from aste.dataset.reader import DatasetLoader
+from aste.trainer import Trainer
+from aste.models import TransformerBaseModel
+from aste.tools import BaseTracker
+from aste.models import ModelMetric, ModelLoss, ModelOutput
+from aste.utils import to_json, config, set_up_logger
 
 import os
 import logging
@@ -25,7 +24,7 @@ def log_introductory_info() -> None:
 def run() -> None:
     dev_score: float = 0.0
     while dev_score <= 1e-5:
-        dataset_reader = DatasetLoader(data_path=data_path)
+        dataset_reader = DatasetLoader(data_path=data_path, include_sub_words_info_in_mask=False)
         train_data = dataset_reader.load('train.txt')
         dev_data = dataset_reader.load('dev.txt')
         test_data = dataset_reader.load('test.txt')
@@ -36,7 +35,7 @@ def run() -> None:
                             'Experiment number': experiment_idx})
         log_introductory_info()
 
-        trainer: Trainer = Trainer(model=BertBaseModel(), tracker=tracker, save_path=save_path)
+        trainer: Trainer = Trainer(model=TransformerBaseModel(), tracker=tracker, save_path=save_path)
 
         trainer.train(train_data=train_data, dev_data=dev_data)
 

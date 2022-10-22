@@ -1,7 +1,8 @@
-import torch
-from torch.nn.utils.rnn import pad_sequence
-from typing import List
 from abc import abstractmethod
+from typing import List
+
+from torch import Tensor
+from torch.nn.utils.rnn import pad_sequence
 
 
 class BaseAggregator:
@@ -9,16 +10,17 @@ class BaseAggregator:
         self.model_name: str = model_name
         self.input_dim: int = input_dim
 
-    def aggregate(self, embeddings: torch.Tensor, spans: List[torch.Tensor]) -> torch.Tensor:
+    def aggregate(self, embeddings: Tensor, spans: List[Tensor]) -> Tensor:
         agg_embeddings: List = list()
-        sentence_embeddings: torch.Tensor
-        sentence_spans: torch.Tensor
+        sentence_embeddings: Tensor
+        sentence_spans: Tensor
         for sentence_embeddings, sentence_spans in zip(embeddings, spans):
-            sentence_agg_embeddings = self._get_agg_sentence_embeddings(sentence_embeddings, sentence_spans)
-            agg_embeddings.append(torch.stack(sentence_agg_embeddings, dim=0))
+            sentence_agg_embeddings: Tensor = self._get_agg_sentence_embeddings(sentence_embeddings, sentence_spans)
+            agg_embeddings.append(sentence_agg_embeddings)
+
         return self.pad_sequence(agg_embeddings)
 
-    def _get_agg_sentence_embeddings(self, sentence_embeddings: torch.Tensor, sentence_spans: torch.Tensor) -> List:
+    def _get_agg_sentence_embeddings(self, sentence_embeddings: Tensor, sentence_spans: Tensor) -> Tensor:
         raise NotImplementedError
 
     @property
@@ -27,5 +29,5 @@ class BaseAggregator:
         raise NotImplementedError
 
     @staticmethod
-    def pad_sequence(agg_embeddings: List[torch.Tensor]) -> torch.Tensor:
-        return pad_sequence(agg_embeddings, padding_value=0, batch_first=True)
+    def pad_sequence(agg_embeddings: List[Tensor]) -> Tensor:
+        return pad_sequence(agg_embeddings, padding_value=0., batch_first=True)
