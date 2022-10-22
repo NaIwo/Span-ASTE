@@ -1,12 +1,12 @@
 from typing import List
 
 import torch
+from aste.utils import config
 from torch import Tensor
 from torch.nn import Module
 from torch.nn.utils.rnn import PackedSequence
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
-from ASTE.utils import config
 from .base_agg import BaseAggregator
 
 

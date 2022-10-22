@@ -1,7 +1,7 @@
 from ast import literal_eval
 from typing import List, Tuple, TypeVar, Optional
 
-from ASTE.dataset.encoders import BaseEncoder, TransformerEncoder
+from ..encoders import BaseEncoder, TransformerEncoder
 
 S = TypeVar('S', bound='Span')
 T = TypeVar('T', bound='Triplet')

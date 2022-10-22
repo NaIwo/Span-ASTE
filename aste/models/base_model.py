@@ -3,8 +3,8 @@ from typing import List, Dict, Any
 
 import torch
 
-from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric
-from ASTE.utils import config
+from . import ModelOutput, ModelLoss, ModelMetric
+from aste.utils import config
 
 
 class BaseModel(torch.nn.Module):

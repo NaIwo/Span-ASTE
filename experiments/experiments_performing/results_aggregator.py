@@ -3,7 +3,7 @@ import json
 from collections import defaultdict
 from typing import Dict, DefaultDict
 
-from ASTE.aste.utils import to_json
+from aste.utils import to_json
 
 SAVE_DIR: str = 'without_crf_sigmoid10'
 AGG_DIR: str = 'endpoint'

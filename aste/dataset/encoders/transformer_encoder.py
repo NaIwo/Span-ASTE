@@ -1,5 +1,5 @@
 from .base_encoder import BaseEncoder
-from ASTE.utils import config
+from aste.utils import config
 from typing import List
 
 from transformers import BertTokenizer, DebertaTokenizer

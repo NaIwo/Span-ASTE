@@ -1,4 +1,4 @@
-from ASTE.dataset.domain.const import ASTELabels
+from ..domain.const import ASTELabels
 
 from typing import Dict
 from functools import partial

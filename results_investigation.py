@@ -1,5 +1,5 @@
-from ASTE.dataset.data.statistics import ResultInvestigator
-from dataset.reader import ASTEDataset
+from aste.dataset.statistics import ResultInvestigator
+from aste.dataset.reader import ASTEDataset
 
 from os import getcwd
 from os.path import join

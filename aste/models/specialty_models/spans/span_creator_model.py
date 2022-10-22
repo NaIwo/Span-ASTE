@@ -1,14 +1,14 @@
 from typing import List, Optional, Callable
 
 import torch
+from aste.utils import config
 from torch import Tensor
 
-from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
-from ASTE.aste.models.specialty_models.spans.crf import CRF
-from ASTE.aste.tools.metrics import Metric, get_selected_metrics
-from ASTE.dataset.domain.const import SpanCode
-from ASTE.dataset.reader import Batch
-from ASTE.utils import config
+from ....dataset.domain import SpanCode
+from ....dataset.reader import Batch
+from ....models import ModelOutput, ModelLoss, ModelMetric, BaseModel
+from ....models.specialty_models.spans.crf import CRF
+from ....tools.metrics import Metric, get_selected_metrics
 
 
 class SpanCreatorModel(BaseModel):

@@ -1,6 +1,6 @@
 from typing import Callable, Optional, Dict
 
-from ASTE.utils import config
+from aste.utils import config
 
 
 class Memory:

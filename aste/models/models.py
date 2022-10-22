@@ -6,24 +6,21 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
-from ASTE.aste.models.model_elements.embeddings import Transformer, BaseEmbedding, WeightedBert, TransformerWithAggregation
-from ASTE.aste.models.model_elements.span_aggregators import (
+from . import ModelOutput, ModelLoss, ModelMetric, BaseModel
+from .model_elements.embeddings import BaseEmbedding, TransformerWithAggregation
+from .model_elements.span_aggregators import (
     BaseAggregator,
-    EndPointAggregator,
-    AttentionAggregator,
-    SumAggregator,
     RnnAggregator
 )
-from ASTE.dataset.reader import Batch
-from ASTE.utils import config
+from ..dataset.reader import Batch
+from aste.utils import config
 from .specialty_models import SpanCreatorModel, TripletExtractorModel, Selector
 
 
-class BertBaseModel(BaseModel):
-    def __init__(self, model_name='Bert Base Model', *args, **kwargs):
+class TransformerBasedModel(BaseModel):
+    def __init__(self, model_name='Transformer Based Model', *args, **kwargs):
 
-        super(BertBaseModel, self).__init__(model_name)
+        super(TransformerBasedModel, self).__init__(model_name)
         self.emb_layer: BaseEmbedding = TransformerWithAggregation()
         self.span_creator: BaseModel = SpanCreatorModel(input_dim=self.emb_layer.embedding_dim)
         self.aggregator: BaseAggregator = RnnAggregator(input_dim=self.emb_layer.embedding_dim)

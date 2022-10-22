@@ -1,11 +1,12 @@
-from ASTE.utils import config
-from ASTE.dataset.reader import Batch
-from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
-from ASTE.aste.tools.metrics import Metric, get_selected_metrics
+from functools import lru_cache
+from typing import List
 
 import torch
-from typing import List
-from functools import lru_cache
+from aste.utils import config
+
+from ....dataset.reader import Batch
+from ....models import ModelOutput, ModelLoss, ModelMetric, BaseModel
+from ....tools.metrics import Metric, get_selected_metrics
 
 
 class AllSpansCreatorModel(BaseModel):

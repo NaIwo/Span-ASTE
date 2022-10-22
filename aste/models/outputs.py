@@ -5,9 +5,9 @@ import json
 from functools import lru_cache
 from typing import List, Dict, TypeVar, Optional, Tuple
 
-from ASTE.utils import config
-from ASTE.dataset.reader import Batch
-from ASTE.dataset.domain.const import ASTELabels
+from aste.utils import config
+from ..dataset.reader import Batch
+from ..dataset.domain.const import ASTELabels
 
 ML = TypeVar('ML', bound='ModelLoss')
 MM = TypeVar('MM', bound='ModelMetric')

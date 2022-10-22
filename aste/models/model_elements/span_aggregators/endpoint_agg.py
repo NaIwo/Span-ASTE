@@ -1,10 +1,10 @@
 from typing import List
 
 import torch
+from aste.utils import config
 from torch import Tensor
 from torch.nn import Module
 
-from ASTE.utils import config
 from .base_agg import BaseAggregator
 
 

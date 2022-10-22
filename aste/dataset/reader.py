@@ -11,10 +11,10 @@ from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from ASTE.dataset.domain.const import SpanCode
-from ASTE.dataset.encoders import BaseEncoder, TransformerEncoder
-from ASTE.utils import config
 from .domain import Sentence, get_span_label_from_sentence
+from .domain.const import SpanCode
+from .encoders import BaseEncoder, TransformerEncoder
+from aste.utils import config
 
 ASTE = TypeVar('ASTE', bound='ASTEDataset')
 
@@ -71,7 +71,7 @@ class DatasetLoader:
         if not include_sub_words_info_in_mask:
             warnings.warn('Careful! If you do not want to include sub-word elements in '
                           'the mask make sure that the embedding model also take this into account '
-                          '(aggregate immersions from sub-words or do not generate such situations)! ')
+                          '(aggregate embeddings from sub-words or do not generate such situations)! ')
 
     def load(self, name: Union[str, List[str]]) -> DataLoader:
         if isinstance(name, str):

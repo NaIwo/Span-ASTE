@@ -1,8 +1,8 @@
-from ASTE.utils import config
-from .tools import Memory, BaseTracker
-from ASTE.dataset.reader import Batch
-from ASTE.dataset.domain.sentence import Sentence
-from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
+from .utils import config
+from tools import Memory, BaseTracker
+from .dataset.reader import Batch
+from .dataset.domain import Sentence
+from .models import ModelOutput, ModelLoss, ModelMetric, BaseModel
 
 
 import torch

@@ -4,7 +4,7 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import List, Dict, DefaultDict, Tuple
 
-from ASTE.aste.utils import to_json
+from aste.utils import to_json
 
 SEP: str = '\\'
 

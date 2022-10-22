@@ -1,10 +1,10 @@
-from dataset.reader import DatasetLoader
-from utils import set_up_logger, config
-from ASTE.aste.trainer import Trainer
-from ASTE.aste.models import BaseModel, BertBaseModel
-from ASTE.aste.tools import WandbTracker, BaseTracker
-from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric
-from ASTE.dataset.domain.sentence import Sentence
+from aste.dataset.reader import DatasetLoader
+from aste.utils import config, set_up_logger
+from aste.trainer import Trainer
+from aste.models import BaseModel, TransformerBasedModel
+from aste.tools import WandbTracker, BaseTracker
+from aste.models import ModelOutput, ModelMetric
+from aste.dataset.domain import Sentence
 
 import logging
 from typing import Dict
@@ -35,8 +35,8 @@ if __name__ == '__main__':
     test_data = dataset_reader.load('test.txt')
 
     # Get Model. You can create your own definition or update existing one.
-    # BertBase model is our provided implementation which obtain best results so far.
-    model: BaseModel = BertBaseModel()
+    # TransformerBased model is our provided implementation which obtain best results so far.
+    model: BaseModel = TransformerBasedModel()
 
     # Setup experiment tracker. Default is BaseTracker (it means: do not track the experiment.)
     # If you want to use other trackers - implement its definition in the file ./aste/tools/trackers.py.

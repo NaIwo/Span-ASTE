@@ -1,5 +1,5 @@
-from ASTE.dataset.domain.const import ASTELabels
-from ASTE.dataset.domain.sentence import Sentence, Triplet, Span
+from ..domain.const import ASTELabels
+from ..domain import Sentence, Triplet, Span
 from .counter import StatsCounter
 
 import numpy as np

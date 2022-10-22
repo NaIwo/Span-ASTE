@@ -1,13 +1,13 @@
 from typing import List
 
 import torch
+from aste.utils import config
 from torch import Tensor
-from transformers import BertModel, DebertaModel
+from transformers import DebertaModel
 
-from ASTE.dataset.reader import Batch
-from ASTE.utils import config
 from .base_embeddings import BaseEmbedding
 from ..span_aggregators import RnnAggregator, BaseAggregator
+from ....dataset.reader import Batch
 
 
 class Transformer(BaseEmbedding):
@@ -25,7 +25,7 @@ class TransformerWithAggregation(BaseEmbedding):
         dim: int = config['encoder']['transformer']['embedding-dimension']
         super(TransformerWithAggregation, self).__init__(embedding_dim=dim, model_name=model_name)
         self.model: DebertaModel = DebertaModel.from_pretrained(config['model']['transformer']['source'])
-        self.aggregator: BaseAggregator = RnnAggregator(input_dim=dim, model_name='RNN Bert Aggregator', num_layers=2)
+        self.aggregator: BaseAggregator = RnnAggregator(input_dim=dim, model_name='RNN Transformer Aggregator', num_layers=2)
 
     def forward(self, batch: Batch, *args, **kwargs) -> Tensor:
         emb: Tensor = self.model.forward(batch.sentence, batch.mask).last_hidden_state

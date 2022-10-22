@@ -1,5 +1,5 @@
-from ASTE.dataset.data.statistics import DatasetStatistics, StatisticComparator
-from dataset.reader import ASTEDataset
+from aste.dataset.statistics import DatasetStatistics, StatisticComparator
+from aste.dataset.reader import ASTEDataset
 
 from os import getcwd
 from os.path import join

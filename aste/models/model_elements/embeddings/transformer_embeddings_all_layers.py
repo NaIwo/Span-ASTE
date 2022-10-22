@@ -1,11 +1,11 @@
 import torch
+from aste.utils import config
 from torch import Tensor
 from transformers import BertModel
 from transformers.modeling_outputs import BaseModelOutputWithPoolingAndCrossAttentions as EmbOut
 
-from ASTE.dataset.reader import Batch
-from ASTE.utils import config
 from .base_embeddings import BaseEmbedding
+from ....dataset.reader import Batch
 
 
 class WeightedBert(BaseEmbedding):

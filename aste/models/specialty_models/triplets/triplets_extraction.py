@@ -2,14 +2,13 @@ from functools import lru_cache
 from typing import Tuple, List, Dict
 
 import torch
+from aste.utils import config
 from torch.nn import CrossEntropyLoss
 
-from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
-from ASTE.aste.tools.metrics import Metric, get_selected_metrics
-from ASTE.dataset.domain.const import ASTELabels
-from ASTE.dataset.reader import Batch
-from ASTE.utils import config
-from .crf_model import CRF
+from ....dataset.domain import ASTELabels
+from ....dataset.reader import Batch
+from ....models import ModelOutput, ModelLoss, ModelMetric, BaseModel
+from ....tools.metrics import Metric, get_selected_metrics
 
 
 class TripletExtractorModel(BaseModel):

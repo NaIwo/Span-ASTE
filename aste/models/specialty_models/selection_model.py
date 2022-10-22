@@ -1,12 +1,13 @@
-from ASTE.utils import config
-from ASTE.aste.tools.metrics import Metric, get_selected_metrics
-from ASTE.aste.models import ModelOutput, ModelLoss, ModelMetric, BaseModel
-
-import torch
-from ASTE.aste.losses import DiceLoss
-from torch.nn.utils.rnn import pad_sequence
 from functools import lru_cache
 from typing import List, Union, Optional
+
+import torch
+from aste.utils import config
+from torch.nn.utils.rnn import pad_sequence
+
+from .. import ModelOutput, ModelLoss, ModelMetric, BaseModel
+from ...losses import DiceLoss
+from ...tools.metrics import Metric, get_selected_metrics
 
 
 class Selector(BaseModel):

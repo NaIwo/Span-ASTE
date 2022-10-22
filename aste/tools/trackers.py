@@ -1,7 +1,9 @@
-from ASTE.utils import config
+from typing import Dict, Optional
 
 import wandb
-from typing import Dict, Optional
+from aste import utils
+
+from aste.utils import config
 
 
 class BaseTracker:
@@ -43,7 +45,7 @@ class WandbTracker(BaseTracker):
         self.tracker.finish()
 
     def add_config(self, new_config: Dict) -> None:
-        self.tracker.config.update(new_config)
+        utils.config.update(new_config)
         self.config.update(new_config)
 
     def log(self, logs: Dict) -> None:
