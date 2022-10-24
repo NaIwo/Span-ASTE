@@ -1,7 +1,9 @@
+from typing import Union
+
 import torch
 from aste.utils import config
 from torch import Tensor
-from transformers import BertModel
+from transformers import BertModel, DebertaModel
 from transformers.modeling_outputs import BaseModelOutputWithPoolingAndCrossAttentions as EmbOut
 
 from .base_embeddings import BaseEmbedding
@@ -12,7 +14,7 @@ class WeightedBert(BaseEmbedding):
     def __init__(self, model_name: str = 'Bert embedding (all layers) model'):
         dim: int = config['encoder']['transformer']['embedding-dimension']
         super(WeightedBert, self).__init__(embedding_dim=dim, model_name=model_name)
-        self.model: BertModel = BertModel.from_pretrained(config['model']['transformer']['source'])
+        self.model: Union[DebertaModel, BertModel] = self.get_transformer_encoder_from_config()
 
         self.linear_layer_1 = torch.nn.Linear(dim, 500)
         self.linear_layer_2 = torch.nn.Linear(500, 300)

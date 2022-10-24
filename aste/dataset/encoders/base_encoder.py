@@ -1,4 +1,7 @@
-from typing import List
+from typing import List, Union
+
+from aste.utils import config
+from transformers import DebertaTokenizer, AutoTokenizer
 
 
 class BaseEncoder:
@@ -21,3 +24,12 @@ class BaseEncoder:
             self.encoder.add_prefix_space = True
         self.encoder.add_prefix_space = False
         return encoded_words
+
+    @staticmethod
+    def get_transformer_encoder_from_config() -> Union[DebertaTokenizer, AutoTokenizer]:
+        if 'deberta' in config['encoder']['transformer']['source']:
+            return DebertaTokenizer.from_pretrained(config['encoder']['transformer']['source'])
+        elif 'bert' in config['encoder']['transformer']['source']:
+            return AutoTokenizer.from_pretrained(config['encoder']['transformer']['source'])
+        else:
+            raise Exception(f"We do not support this transformer model {config['encoder']['transformer']['source']}!")
