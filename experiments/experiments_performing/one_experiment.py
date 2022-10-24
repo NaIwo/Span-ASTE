@@ -1,8 +1,7 @@
 from aste.dataset.reader import DatasetLoader
 from aste.trainer import Trainer
-from aste.models import TransformerBaseModel
 from aste.tools import BaseTracker
-from aste.models import ModelMetric, ModelLoss, ModelOutput
+from aste.models import ModelMetric, ModelLoss, ModelOutput, TransformerBasedModel
 from aste.utils import to_json, config, set_up_logger
 
 import os
@@ -35,7 +34,7 @@ def run() -> None:
                             'Experiment number': experiment_idx})
         log_introductory_info()
 
-        trainer: Trainer = Trainer(model=TransformerBaseModel(), tracker=tracker, save_path=save_path)
+        trainer: Trainer = Trainer(model=TransformerBasedModel(), tracker=tracker, save_path=save_path)
 
         trainer.train(train_data=train_data, dev_data=dev_data)
 
