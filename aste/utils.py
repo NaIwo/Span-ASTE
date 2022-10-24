@@ -40,7 +40,7 @@ class ConfigReader:
 
 
 try:
-    config = ConfigReader.read_config(os.path.join(os.getcwd(), 'config.yml'))
+    config = ConfigReader.read_config(os.path.join(os.environ['CONFIG_FILE_PATH'], 'config.yml'))
 except FileNotFoundError as e:
     default: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.yml')
     config = ConfigReader.read_config(default)
