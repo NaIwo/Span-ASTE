@@ -1,5 +1,5 @@
 from .utils import config
-from tools import Memory, BaseTracker
+from .tools import Memory, BaseTracker
 from .dataset.reader import Batch
 from .dataset.domain import Sentence
 from .models import ModelOutput, ModelLoss, ModelMetric, BaseModel
