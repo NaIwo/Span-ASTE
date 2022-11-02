@@ -1,14 +1,14 @@
-from .base_encoder import BaseEncoder
-from aste.utils import config
-from typing import List
+from typing import List, Union
 
-from transformers import BertTokenizer, DebertaTokenizer
+from transformers import DebertaTokenizer, AutoTokenizer
+
+from .base_encoder import BaseEncoder
 
 
 class TransformerEncoder(BaseEncoder):
     def __init__(self):
         super().__init__(encoder_name='transformer tokenizer')
-        self.encoder: DebertaTokenizer = DebertaTokenizer.from_pretrained(config['encoder']['transformer']['source'])
+        self.encoder: Union[DebertaTokenizer, AutoTokenizer] = self.get_transformer_encoder_from_config()
         self.offset: int = 1
 
     def encode(self, sentence: str) -> List:
@@ -21,7 +21,7 @@ class TransformerEncoder(BaseEncoder):
 class TransformerEncoderWithoutSubwords(BaseEncoder):
     def __init__(self):
         super().__init__(encoder_name='transformer without subwords tokenizer')
-        self.encoder: DebertaTokenizer = DebertaTokenizer.from_pretrained(config['encoder']['transformer']['source'])
+        self.encoder: Union[DebertaTokenizer, AutoTokenizer] = self.get_transformer_encoder_from_config()
         self.offset: int = 1
 
     def encode(self, sentence: str) -> List:
