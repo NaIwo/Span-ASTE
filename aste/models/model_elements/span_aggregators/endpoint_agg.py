@@ -1,7 +1,6 @@
 from typing import List
 
 import torch
-from aste.utils import config
 from torch import Tensor
 from torch.nn import Module
 
@@ -12,7 +11,7 @@ class EndPointAggregator(BaseAggregator, Module):
     def __init__(self, input_dim: int, model_name: str = 'End Point Aggregator', *args, **kwargs):
         Module.__init__(self)
 
-        distance_embedding_dim: int = config['model']['aggregators']['endpoint']['distance-embedding-dim']
+        distance_embedding_dim: int = 2
         self.distance_embedding = torch.nn.Linear(1, distance_embedding_dim)
 
         self._out_dim: int = 2 * input_dim + distance_embedding_dim

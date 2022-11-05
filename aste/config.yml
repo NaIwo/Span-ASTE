@@ -2,7 +2,7 @@ general:
   device: cuda # {cpu, cuda}
   logging-level: INFO
 dataset:
-  batch-size: 8
+  batch-size: 16
   effective-batch-size: 1 # gradient accumulation (after (batch-size * effective-batch-size) samples the gradient will be computed)
   number-of-polarities: 3
 model:
@@ -13,15 +13,12 @@ model:
   transformer:
     learning-rate: 0.00001
     source: microsoft/deberta-base
-  aggregators:
-    endpoint:
-      distance-embedding-dim: 3
   span_creator:
     loss-weight: 2.0
   selector:
     dice-loss-alpha: 0.5
     loss-weight: 1.0
-    sigmoid-multiplication: 2. # In the training phase of the full model, increase the importance of the sigmoid input
+    sigmoid-multiplication: 1.5 # In the training phase of the full model, increase the importance of the sigmoid input
                                 # [sigmoid(value * neuron)] -
                                 # more drastic incorrect span omitting
   triplet-extractor:
