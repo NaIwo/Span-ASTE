@@ -5,6 +5,7 @@ from typing import List, Union, TypeVar
 
 import numpy as np
 import torch
+from aste.utils import config
 from torch import Tensor
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
@@ -14,7 +15,6 @@ from tqdm import tqdm
 from .domain import Sentence, get_span_label_from_sentence
 from .domain.const import SpanCode
 from .encoders import BaseEncoder, TransformerEncoder
-from aste.utils import config
 
 ASTE = TypeVar('ASTE', bound='ASTEDataset')
 
@@ -73,7 +73,7 @@ class DatasetLoader:
                           'the mask make sure that the embedding model also take this into account '
                           '(aggregate embeddings from sub-words or do not generate such situations)! ')
 
-    def load(self, name: Union[str, List[str]]) -> DataLoader:
+    def load(self, name: Union[str, List[str]], drop_last: bool = False, shuffle: bool = True) -> DataLoader:
         if isinstance(name, str):
             name = [name]
 
@@ -82,8 +82,8 @@ class DatasetLoader:
         for data_name in name:
             paths.append(os.path.join(self.data_path, data_name))
         dataset: ASTEDataset = ASTEDataset(paths, self.encoder, self.include_sub_words_info_in_mask)
-        return DataLoader(dataset, batch_size=config['dataset']['batch-size'], shuffle=True, prefetch_factor=2,
-                          collate_fn=self._collate_fn)
+        return DataLoader(dataset, batch_size=config['dataset']['batch-size'], shuffle=shuffle, prefetch_factor=2,
+                          drop_last=drop_last, collate_fn=self._collate_fn)
 
     def _collate_fn(self, batch: List):
         sentence_objs: List[Sentence] = list()

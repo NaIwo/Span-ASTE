@@ -1,19 +1,19 @@
-from .utils import config
-from .tools import Memory, BaseTracker
-from .dataset.reader import Batch
-from .dataset.domain import Sentence
-from .models import ModelOutput, ModelLoss, ModelMetric, BaseModel
-
-
-import torch
-from torch.utils.data import DataLoader
-import os
-import yaml
 import logging
-from tqdm import tqdm
+import os
 from datetime import datetime
 from functools import singledispatchmethod
 from typing import Optional, Dict, Union, Any, List
+
+import torch
+import yaml
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+
+from .dataset.domain import Sentence
+from .dataset.reader import Batch
+from .models import ModelOutput, ModelLoss, ModelMetric, BaseModel
+from .tools import Memory, BaseTracker
+from .utils import config
 
 
 class Trainer:

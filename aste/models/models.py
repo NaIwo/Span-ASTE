@@ -10,7 +10,8 @@ from . import ModelOutput, ModelLoss, ModelMetric, BaseModel
 from .model_elements.embeddings import BaseEmbedding, TransformerWithAggregation
 from .model_elements.span_aggregators import (
     BaseAggregator,
-    RnnAggregator
+    RnnAggregator,
+    EndPointAggregator
 )
 from ..dataset.reader import Batch
 from aste.utils import config
@@ -23,11 +24,11 @@ class TransformerBasedModel(BaseModel):
         super(TransformerBasedModel, self).__init__(model_name)
         self.emb_layer: BaseEmbedding = TransformerWithAggregation()
         self.span_creator: BaseModel = SpanCreatorModel(input_dim=self.emb_layer.embedding_dim)
-        self.aggregator: BaseAggregator = RnnAggregator(input_dim=self.emb_layer.embedding_dim)
+        self.aggregator: BaseAggregator = EndPointAggregator(input_dim=self.emb_layer.embedding_dim)
         self.span_selector: BaseModel = Selector(input_dim=self.aggregator.output_dim)
         self.triplets_extractor: BaseModel = TripletExtractorModel(input_dim=self.aggregator.output_dim)
 
-        epochs: List = [3, 5, config['model']['total-epochs']]
+        epochs: List = [2, 4, config['model']['total-epochs']]
 
         self.training_scheduler: Dict = {
             range(0, epochs[0]): {
