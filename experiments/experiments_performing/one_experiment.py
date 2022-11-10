@@ -24,7 +24,7 @@ def run() -> None:
     dev_score: float = 0.0
     while dev_score <= 1e-5:
         dataset_reader = DatasetLoader(data_path=data_path, include_sub_words_info_in_mask=False)
-        train_data = dataset_reader.load('train.txt')
+        train_data = dataset_reader.load('train.txt', drop_last=True)
         dev_data = dataset_reader.load('dev.txt')
         test_data = dataset_reader.load('test.txt')
 
