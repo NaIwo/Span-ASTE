@@ -1,5 +1,4 @@
-from typing import List
-from typing import Union
+from typing import List, Union
 
 import torch
 from aste.utils import config
@@ -7,7 +6,7 @@ from torch import Tensor
 from transformers import DebertaModel, AutoModel
 
 from .base_embeddings import BaseEmbedding
-from ..span_aggregators import RnnAggregator, BaseAggregator
+from ..span_aggregators import BaseAggregator, LastElementAggregator
 from ....dataset.reader import Batch
 
 
@@ -26,8 +25,8 @@ class TransformerWithAggregation(BaseEmbedding):
         dim: int = config['encoder']['transformer']['embedding-dimension']
         super(TransformerWithAggregation, self).__init__(embedding_dim=dim, model_name=model_name)
         self.model: Union[DebertaModel, AutoModel] = self.get_transformer_encoder_from_config()
-        self.aggregator: BaseAggregator = RnnAggregator(input_dim=dim, model_name='RNN Transformer Aggregator',
-                                                        num_layers=2)
+        model_name: str = 'Last Element Transformer Aggregator'
+        self.aggregator: BaseAggregator = LastElementAggregator(input_dim=dim, model_name=model_name)
 
     def forward(self, batch: Batch, *args, **kwargs) -> Tensor:
         emb: Tensor = self.model.forward(batch.sentence, batch.mask).last_hidden_state

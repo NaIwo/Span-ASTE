@@ -2,13 +2,13 @@ general:
   device: cuda # {cpu, cuda}
   logging-level: INFO
 dataset:
-  batch-size: 16
+  batch-size: 8
   effective-batch-size: 1 # gradient accumulation (after (batch-size * effective-batch-size) samples the gradient will be computed)
   number-of-polarities: 3
 model:
   total-epochs: 120
   learning-rate: 0.0001
-  early-stopping: 24 # num of epochs without improvement
+  early-stopping: 18 # num of epochs without improvement
   best-epoch-objective: SpanF1 # you can choose: loss and all of metrics
   transformer:
     learning-rate: 0.00001
@@ -18,7 +18,7 @@ model:
   selector:
     dice-loss-alpha: 0.5
     loss-weight: 1.0
-    sigmoid-multiplication: 1.5 # In the training phase of the full model, increase the importance of the sigmoid input
+    sigmoid-multiplication: 2.0 # In the training phase of the full model, increase the importance of the sigmoid input
                                 # [sigmoid(value * neuron)] -
                                 # more drastic incorrect span omitting
   triplet-extractor:
