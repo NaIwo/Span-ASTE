@@ -109,8 +109,8 @@ class Span:
     def from_range(cls, span_range: List[int], sentence: str) -> S:
         if len(span_range) == 1:
             span_range.append(span_range[0])
-        words: List[str] = sentence.split()[span_range[0]:span_range[1] + 1]
-        return Span(start_idx=span_range[0], end_idx=span_range[1], words=words)
+        words: List[str] = sentence.split()[span_range[0]:span_range[-1] + 1]
+        return Span(start_idx=span_range[0], end_idx=span_range[-1], words=words)
 
     def __str__(self) -> str:
         return str({
